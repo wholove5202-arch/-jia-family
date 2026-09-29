@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "家",
+    "slug": "jia-family",
+    "version": "2.2.0",
+    "orientation": "portrait",
+    "ios": {
+      "bundleIdentifier": "com.jia.familymemory",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "用于选择并保存家庭照片和视频到「家」。",
+        "NSCameraUsageDescription": "用于拍摄家庭照片、视频和扫描老照片。"
+      },
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "com.jia.familymemory",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#FBF4E9"
+      }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允许「家」选择你主动添加的家庭照片和视频。",
+          "cameraPermission": "允许「家」拍摄家庭照片、视频和扫描老照片。"
+        }
+      ]
+    ],
+    "userInterfaceStyle": "light",
+    "scheme": "jia",
+    "extra": {
+      "eas": {
+        "projectId": "3f7007ac-b334-4194-974c-df1dfe168b7b"
+      }
+    }
+  }
+}
