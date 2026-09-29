@@ -43,7 +43,7 @@ jobs:
               exit 1
             fi
             # SDK 54 uses the legacy link endpoint, which redirects to the Expo Go deep link.
-            preview_url=$(curl --silent --show-error --max-time 3 --output /dev/null --dump-header - 'http://localhost:8081/_expo/link?platform=ios' | sed -nE 's/^[Ll]ocation:[[:space:]]*(exp:\/\/[^[:space:]\r]+).*/\1/p' | tr -d '\r' | head -n 1 || true)
+            preview_url=$(curl --silent --show-error --max-time 3 --output /dev/null --dump-header - 'http://localhost:8081/_expo/link?platform=ios' | sed -nE 's/^[Ll]ocation:[[:space:]]*(exp:\/\/[^[:space:]]+).*/\1/p' | tr -d '\r' | head -n 1 || true)
             if [[ "$preview_url" == *localhost* || "$preview_url" == *127.0.0.1* ]]; then
               preview_url=""
             fi
