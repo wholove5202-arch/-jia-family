@@ -1,0 +1,7 @@
+PASS - App.js exists
+PASS - Expo main
+PASS - EAS preview internal
+PASS - iOS bundle id
+PASS - photo plugin
+PASS - babel config
+PASS - metro config

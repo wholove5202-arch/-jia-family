@@ -1,0 +1,9 @@
+PASS - iOS bundle id
+PASS - Android package
+PASS - Android photo permission
+PASS - Android video permission
+PASS - Android camera permission
+PASS - Android back handler
+PASS - EAS iOS preview
+PASS - EAS Android preview
+PASS - relative imports

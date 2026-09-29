@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+dist-native/
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+.env
+.env.*
+.DS_Store
