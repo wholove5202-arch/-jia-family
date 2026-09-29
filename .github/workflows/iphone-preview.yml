@@ -42,7 +42,11 @@ jobs:
               cat /tmp/jia-expo-preview.log
               exit 1
             fi
-            preview_url=$(curl --silent --max-time 2 'http://localhost:8081/_expo/open?platform=ios&runtime=expo' | node -e 'let body="";process.stdin.on("data",chunk=>body+=chunk);process.stdin.on("end",()=>{try { const value=JSON.parse(body); if(value.url?.startsWith("exp://") && !value.url.includes("localhost") && !value.url.includes("127.0.0.1")) process.stdout.write(value.url) } catch {} })' || true)
+            # SDK 54 uses the legacy link endpoint, which redirects to the Expo Go deep link.
+            preview_url=$(curl --silent --show-error --max-time 3 --output /dev/null --dump-header - 'http://localhost:8081/_expo/link?platform=ios' | sed -nE 's/^[Ll]ocation:[[:space:]]*(exp:\/\/[^[:space:]\r]+).*/\1/p' | tr -d '\r' | head -n 1 || true)
+            if [[ "$preview_url" == *localhost* || "$preview_url" == *127.0.0.1* ]]; then
+              preview_url=""
+            fi
             if [ -n "$preview_url" ] && grep -q 'Tunnel ready' /tmp/jia-expo-preview.log; then
               break
             fi
@@ -50,7 +54,9 @@ jobs:
           done
           if [ -z "$preview_url" ] || ! grep -q 'Tunnel ready' /tmp/jia-expo-preview.log; then
             cat /tmp/jia-expo-preview.log
-            echo "Expo tunnel did not become ready."
+            echo "Expo link endpoint response headers:"
+            curl --silent --show-error --max-time 3 --output /dev/null --dump-header - 'http://localhost:8081/_expo/link?platform=ios' || true
+            echo "Expo tunnel link could not be extracted."
             exit 1
           fi
           echo "Open on your iPhone while this workflow is running: $preview_url"
