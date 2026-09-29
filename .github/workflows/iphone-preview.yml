@@ -1,0 +1,66 @@
+name: iPhone Expo Go preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: "1"
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Check Expo access
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Add the EXPO_TOKEN repository secret from the liupengcheng520 Expo account first."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Expo tunnel
+        run: npm install --global '@expo/ngrok@^4.1.0'
+      - name: Start preview and show iPhone link
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx expo start --go --tunnel --port 8081 > /tmp/jia-expo-preview.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          preview_url=""
+          for attempt in {1..90}; do
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat /tmp/jia-expo-preview.log
+              exit 1
+            fi
+            preview_url=$(curl --silent --max-time 2 'http://localhost:8081/_expo/open?platform=ios&runtime=expo' | node -e 'let body="";process.stdin.on("data",chunk=>body+=chunk);process.stdin.on("end",()=>{try { const value=JSON.parse(body); if(value.url?.startsWith("exp://") && !value.url.includes("localhost") && !value.url.includes("127.0.0.1")) process.stdout.write(value.url) } catch {} })' || true)
+            if [ -n "$preview_url" ] && grep -q 'Tunnel ready' /tmp/jia-expo-preview.log; then
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "$preview_url" ] || ! grep -q 'Tunnel ready' /tmp/jia-expo-preview.log; then
+            cat /tmp/jia-expo-preview.log
+            echo "Expo tunnel did not become ready."
+            exit 1
+          fi
+          echo "Open on your iPhone while this workflow is running: $preview_url"
+          {
+            echo "## 家 · iPhone 测试"
+            echo ""
+            echo "在 iPhone 上打开这个链接（Expo Go 已登录 liupengcheng520）："
+            echo ""
+            echo "[$preview_url]($preview_url)"
+            echo ""
+            echo "此链接只在本次工作流运行期间有效，最长约 45 分钟。"
+          } >> "$GITHUB_STEP_SUMMARY"
+          wait "$server_pid"
