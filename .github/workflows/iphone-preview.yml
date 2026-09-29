@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: jia-iphone-preview
+  cancel-in-progress: true
+
 jobs:
   preview:
     runs-on: ubuntu-latest
