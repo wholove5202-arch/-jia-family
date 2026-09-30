@@ -15,6 +15,10 @@ export default function JiaIcon({name,size=24,color='#965331'}){
  case 'notes':shapes=[box(4,2,16,20),line(7,7,10,1.6),line(7,11,10,1.6),line(7,15,7,1.6)];break;
  case 'chat':shapes=[box(2,3,20,15,5),line(5,17,1.8,5,{transform:[{rotate:'25deg'}]}),line(6,20,5,1.8,{transform:[{rotate:'-30deg'}]}),circle(6,9,2,true),circle(11,9,2,true),circle(16,9,2,true)];break;
  case 'lock':shapes=[box(6,1,12,12,6),box(3,10,18,13,3,{backgroundColor:'#FBF4E9'}),circle(10.4,14,3.2,true),line(11.3,17,1.5,3)];break;
+ case 'letter':shapes=[box(2,5,20,15,3),line(3.5,7,10,1.7,{transform:[{rotate:'35deg'}]}),line(10.5,12,10,1.7,{transform:[{rotate:'-35deg'}]}),circle(17,2,5,true)];break;
+ case 'privateAlbum':shapes=[box(2,5,16,15,3),circle(5,8,3),line(4,15,7,1.7,{transform:[{rotate:'-38deg'}]}),box(13,12,9,10,3,{backgroundColor:'#FBF4E9'}),box(15,9,5,7,3)];break;
+ case 'remember':shapes=[circle(8,2,8),box(3,12,18,10,7),circle(18,2,4,true),line(19.2,0,1.5,8)];break;
+ case 'shieldLock':shapes=[box(5,2,14,18,6),box(8,10,8,9,2,{backgroundColor:'#FBF4E9'}),box(10,7,4,6,2),circle(11,13,2,true)];break;
  case 'memorial':shapes=[box(6,10,12,12,2),line(11.2,6,1.6,4),circle(9,1,6),line(3,22,18,1.6)];break;
  case 'scan':shapes=[line(2,2,6,1.7),line(2,2,1.7,6),line(16,2,6,1.7),line(20.3,2,1.7,6),line(2,20.3,6,1.7),line(2,16,1.7,6),line(16,20.3,6,1.7),line(20.3,16,1.7,6),box(6,6,12,12,2),line(1,11.2,22,1.6)];break;
  case 'film':shapes=[box(2,3,20,18,3),line(7,3,1.6,18),line(15.4,3,1.6,18),line(2,8,5,1.6),line(2,15,5,1.6),line(17,8,5,1.6),line(17,15,5,1.6)];break;
