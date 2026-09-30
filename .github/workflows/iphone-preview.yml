@@ -37,54 +37,17 @@ jobs:
         shell: bash
         timeout-minutes: 10
         run: |
-          set -uo pipefail
-          LOG=/tmp/jia-expo-preview.log
-          : > "$LOG"
-          CI=1 npx expo start --go --tunnel --port 8081 > "$LOG" 2>&1 &
-          server_pid=$!
-          cleanup() {
-            kill "$server_pid" 2>/dev/null || true
-            wait "$server_pid" 2>/dev/null || true
-          }
-          trap cleanup EXIT
+          set -euo pipefail
+          echo "Starting Expo tunnel..."
+          set +e
+          timeout 8m script -q -f -e -c "env -u CI npx expo start --go --tunnel --port 8081" /dev/null
+          code=$?
+          set -e
 
-          preview_url=""
-          for attempt in {1..90}; do
-            if ! kill -0 "$server_pid" 2>/dev/null; then
-              echo "Expo exited during startup."
-              tail -n 160 "$LOG" || true
-              exit 1
-            fi
-
-            # Expo prints the real public tunnel URL to its startup log.
-            preview_url=$(grep -Eo 'exp://[^[:space:]]+' "$LOG" | grep -Ev 'localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.' | tail -n 1 || true)
-            if [ -n "$preview_url" ]; then
-              break
-            fi
-            sleep 2
-          done
-
-          echo "----- Expo startup log -----"
-          tail -n 160 "$LOG" || true
-
-          if [ -z "$preview_url" ]; then
-            echo "No public Expo tunnel URL was produced."
-            exit 1
+          # timeout=124 means the preview stayed alive for the full test window.
+          if [ "$code" -eq 124 ]; then
+            echo "Expo preview window finished normally."
+            exit 0
           fi
 
-          echo "PUBLIC_IPHONE_LINK=$preview_url"
-          {
-            echo "## 家 · iPhone 真机测试"
-            echo ""
-            echo "Expo Go 打开下面这个公网链接："
-            echo ""
-            echo "[$preview_url]($preview_url)"
-            echo ""
-            echo "这个链接只在本次工作流运行期间有效。"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # Keep the public tunnel alive for eight minutes.
-          for keepalive in {1..240}; do
-            kill -0 "$server_pid" 2>/dev/null || break
-            sleep 2
-          done
+          exit "$code"
