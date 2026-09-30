@@ -23,9 +23,38 @@ export function FamilyTreeScreen({family,onPerson,focusId='me'}){
  const responder=useRef(PanResponder.create({onStartShouldSetPanResponder:()=>false,onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)+Math.abs(g.dy)>8||g.numberActiveTouches>1,onPanResponderGrant:e=>{const t=e.nativeEvent.touches;gesture.current={...live.current,distance:t.length>1?Math.hypot(t[0].pageX-t[1].pageX,t[0].pageY-t[1].pageY):0};},onPanResponderMove:(e,g)=>{const t=e.nativeEvent.touches;if(t.length>1){const d=Math.hypot(t[0].pageX-t[1].pageX,t[0].pageY-t[1].pageY);if(!gesture.current.distance)gesture.current.distance=d;setZoom(Math.max(.6,Math.min(5,gesture.current.zoom*d/gesture.current.distance)));}else setOffset({x:gesture.current.offset.x+g.dx,y:gesture.current.offset.y+g.dy});}})).current;
  const reset=()=>{setZoom(1);setOffset({x:0,y:0});};
  const line=(key,x,y,w,h,color='#A7C4CB')=><View key={key} pointerEvents="none" style={{position:'absolute',left:x,top:y,width:Math.max(2,w),height:Math.max(2,h),backgroundColor:color}}/>;
- const edges=[],couples=new Set();
- for(const p of members){const c=layout.positions[p.id];if(!c)continue;const parents=[p.fatherId,p.motherId].map(id=>layout.positions[id]).filter(Boolean);if(parents.length){const x=parents.reduce((v,p)=>v+p.x,0)/parents.length,top=Math.max(...parents.map(p=>p.y))+(parents.length===2?33:100),bottom=c.y-8,mid=(top+bottom)/2;if(bottom>top){if(parents.length===2)edges.push(line('pair'+p.id,Math.min(...parents.map(p=>p.x))+34,top,Math.max(0,Math.abs(parents[0].x-parents[1].x)-68),2));edges.push(line('a'+p.id,x,top,2,mid-top),line('b'+p.id,Math.min(x,c.x),mid,Math.abs(c.x-x),2),line('c'+p.id,c.x,mid,2,bottom-mid));}}
- for(const id of p.spouseIds||[]){const q=layout.positions[id],key=[p.id,id].sort().join(':');if(q&&q.y===c.y&&!couples.has(key)){couples.add(key);edges.push(line(key,Math.min(c.x,q.x)+31,c.y+28,Math.max(0,Math.abs(c.x-q.x)-62),2));}}}
+ const edges=[],couples=new Set(),parentGroups=new Map();
+ for(const p of members){
+  const cpos=layout.positions[p.id];if(!cpos)continue;
+  for(const id of p.spouseIds||[]){
+   const q=layout.positions[id],key=[p.id,id].sort().join(':');
+   if(q&&q.y===cpos.y&&!couples.has(key)){
+    couples.add(key);
+    edges.push(line('spouse:'+key,Math.min(cpos.x,q.x)+31,cpos.y+28,Math.max(0,Math.abs(cpos.x-q.x)-62),2));
+   }
+  }
+  const parentIds=[p.fatherId,p.motherId].filter(id=>layout.positions[id]);
+  if(parentIds.length){
+   const key=parentIds.slice().sort().join(':');
+   if(!parentGroups.has(key))parentGroups.set(key,{parentIds,children:[]});
+   parentGroups.get(key).children.push(p);
+  }
+ }
+ for(const [key,g] of parentGroups){
+  const ps=g.parentIds.map(id=>layout.positions[id]).filter(Boolean),kids=g.children.map(p=>layout.positions[p.id]).filter(Boolean);
+  if(!ps.length||!kids.length)continue;
+  // 两位父母时，严格从夫妻头像中心之间的中点向下；单亲时从该人物中心向下。
+  const sourceX=ps.length===2?(ps[0].x+ps[1].x)/2:ps[0].x;
+  const sourceY=Math.max(...ps.map(p=>p.y))+30;
+  const childTop=Math.min(...kids.map(k=>k.y))-8;
+  const branchY=sourceY+(childTop-sourceY)*.55;
+  if(childTop>sourceY){
+   edges.push(line('trunk:'+key,sourceX,sourceY,2,branchY-sourceY));
+   const minX=Math.min(...kids.map(k=>k.x)),maxX=Math.max(...kids.map(k=>k.x));
+   if(kids.length>1)edges.push(line('branch:'+key,minX,branchY,maxX-minX,2));
+   for(let n=0;n<kids.length;n++)edges.push(line('child:'+key+':'+n,kids[n].x,branchY,2,childTop-branchY));
+  }
+ }
  return <View style={s.root}><View style={{padding:20,paddingBottom:8}}><Text style={s.title}>家族树</Text><Text style={s.sub}>{family.name} · {members.length} 位家人</Text><Chips options={[["three","三代"],["full","全部树状图"],["list","亲人列表"]]} value={mode} onChange={v=>{setMode(v);reset();}}/><Text style={s.small}>{mode==='three'?'从最晚一代向上显示三代':'点头像查看资料；双指缩放，拖动查看'}</Text></View>
  {mode==='list'?<ScrollView contentContainerStyle={{padding:20,paddingBottom:100}}>{layoutFamily(members,true).rows.flat().map(p=><TouchableOpacity key={p.id} onPress={()=>onPerson(p)} style={[s.infoRow,{alignItems:'center'}]}><PersonAvatar person={p} size={48}/><View style={{flex:1}}><Text style={s.nodeName}>{p.name}</Text><Text style={s.small}>{p.relation||'家人'}</Text></View><Text style={s.link}>查看 ›</Text></TouchableOpacity>)}</ScrollView>:<View style={{flex:1,margin:16,marginTop:4,marginBottom:100,borderRadius:26,backgroundColor:'#EFF6F7',overflow:'hidden',borderWidth:1,borderColor:'#DCE9EA'}} onLayout={e=>setViewport({w:e.nativeEvent.layout.width,h:e.nativeEvent.layout.height})} {...responder.panHandlers}>
  <View style={{position:'absolute',left:(viewport.w-layout.width)/2,top:(viewport.h-layout.height)/2,width:layout.width,height:layout.height,transform:[{translateX:offset.x},{translateY:offset.y},{scale}]}}>{edges}{layout.rows.flat().map(p=>{const pos=layout.positions[p.id];return <TouchableOpacity key={p.id} accessibilityLabel={'查看'+p.name} onPress={()=>onPerson(p)} style={{position:'absolute',left:pos.x-47,top:pos.y,width:94,alignItems:'center'}}><View style={{borderWidth:p.id===focusId?2:0,borderColor:'#719DAA',borderRadius:36,padding:2}}><PersonAvatar person={p} size={62}/></View><Text numberOfLines={1} style={s.nodeName}>{p.name}</Text><Text style={s.small}>{p.dead?'已故':p.id==='me'?'我':''}</Text></TouchableOpacity>})}</View>
