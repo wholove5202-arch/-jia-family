@@ -83,9 +83,8 @@ export default function IntegratedPhase1App(){
 
  const Person=()=> <PersonProfileScreen person={person} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onRelation={()=>setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
 
- const Private=()=> <ScrollView contentContainerStyle={[s.page,{backgroundColor:"#F8F2FB"}]}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><JiaIcon name="lock"/><Text style={s.heroT}>私密空间</Text></View><Text style={s.muted}>独立保存 · 家主不可查看 · 默认不进入 AI</Text>
-  <Action title="二级密码（可选）" onPress={()=>setScreen("password")}/><Action title="写给未来的一封信" onPress={()=>setScreen("futureLetter")}/><Action title="非公开相册" onPress={()=>setScreen("privateMedia")}/><Action title="想念TA" onPress={()=>setScreen("miss")}/>
- </ScrollView>;
+ const privateMenu=[["shieldLock","二级密码（可选）","给私密空间再加一道保护","password"],["letter","写给未来的一封信","文字与原声，留给未来的人","futureLetter"],["privateAlbum","非公开相册","只属于自己的私密影像","privateMedia"],["remember","想念TA","把没有说完的话，安静留下","miss"]];
+ const Private=()=> <ScrollView contentContainerStyle={s.privatePage}><View style={s.privateHero}><View style={s.privateHeroIcon}><JiaIcon name="lock" size={29}/></View><View style={{flex:1}}><Text style={s.privateTitle}>私密空间</Text><Text style={s.privateSub}>独立保存 · 家主不可查看 · 默认不进入 AI</Text></View></View><View style={s.privateMenu}>{privateMenu.map(([icon,title,sub,key],i)=><TouchableOpacity key={key} activeOpacity={.72} onPress={()=>setScreen(key)} style={[s.privateRow,i<privateMenu.length-1&&s.privateDivider]}><View style={s.privateIcon}><JiaIcon name={icon} size={27}/></View><View style={{flex:1}}><Text style={s.privateRowTitle}>{title}</Text><Text style={s.privateRowSub}>{sub}</Text></View><Text style={s.privateArrow}>›</Text></TouchableOpacity>)}</View><View style={s.privateSeal}><JiaIcon name="shieldLock" size={18}/><Text style={s.privateSealText}>这里的内容默认只属于你</Text></View></ScrollView>;
 
  let body;
  if(screen==="welcome")body=<Welcome onStart={()=>setScreen("entry")}/>;
