@@ -33,7 +33,13 @@ export function addRelative(members,anchorId,relation,record,{half=false,parentS
   if(relation==='remarry'){for(const id of a.spouseIds||[]){const old=next.find(p=>p.id===id);if(priorStatus==='widowed'&&!old?.dead)throw new Error('配偶尚未标记已故，请先确认状态');if(old){old.spouseIds=(old.spouseIds||[]).filter(id=>id!==a.id);old.marriages=[...(old.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:priorStatus}];}a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==id),{personId:id,status:priorStatus}];}a.spouseIds=[];}
   a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==b.id),{personId:b.id,status:'married'}];b.marriages=[...(b.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:'married'}];
   a.spouseIds=[...new Set([...(a.spouseIds||[]),b.id])];b.spouseIds=[...new Set([...(b.spouseIds||[]),a.id])];
- }else if(relation==='son'||relation==='daughter')assign(b,parentSide==='mother'?'motherId':'fatherId',a.id);
+ }else if(relation==='son'||relation==='daughter'){
+  const key=parentSide==='mother'?'motherId':'fatherId',otherKey=key==='fatherId'?'motherId':'fatherId';
+  assign(b,key,a.id);
+  // 普通家庭中，添加子女时自动把当前配偶补为另一位父母；特殊家庭仍可在“编辑关系”里手动调整。
+  const spouse=(a.spouseIds||[]).map(id=>next.find(p=>p.id===id)).find(Boolean);
+  if(spouse&&!b[otherKey])b[otherKey]=spouse.id;
+ }
  else if(['sibling','brother','sister'].includes(relation)){
   const kind=half?parentSide:'full';a.siblingLinks=[...(a.siblingLinks||[]).filter(l=>l.personId!==b.id),{personId:b.id,kind}];b.siblingLinks=[...(b.siblingLinks||[]).filter(l=>l.personId!==a.id),{personId:a.id,kind}];
   if(half){const key=parentSide==='mother'?'motherId':'fatherId';if(!a[key])throw new Error('请先补充共同父亲或母亲');assign(b,key,a[key]);}
