@@ -13,7 +13,7 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     env:
       CI: "1"
       EXPO_TOKEN: ${{ secrets.EXRO_TOKEN }}
@@ -35,48 +35,59 @@ jobs:
         run: npm install --global '@expo/ngrok@^4.1.0'
       - name: Start preview and show iPhone link
         shell: bash
+        timeout-minutes: 8
         run: |
-          set -euo pipefail
+          set -uo pipefail
           preview_url=""
           server_pid=""
-          for startup in 1 2 3; do
-            echo "Starting Expo tunnel (attempt $startup of 3)"
-            npx expo start --go --tunnel --port 8081 > /tmp/jia-expo-preview.log 2>&1 &
+
+          cleanup() {
+            if [ -n "$server_pid" ]; then
+              kill "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+            fi
+          }
+          trap cleanup EXIT
+
+          for startup in 1 2; do
+            : > /tmp/jia-expo-preview.log
+            echo "Starting Expo tunnel (attempt $startup of 2)"
+
+            CI=1 npx expo start --go --tunnel --port 8081 > /tmp/jia-expo-preview.log 2>&1 &
             server_pid=$!
-            for attempt in {1..90}; do
+
+            for attempt in {1..60}; do
               if ! kill -0 "$server_pid" 2>/dev/null; then
                 echo "Expo exited during startup."
                 break
               fi
-              if grep -q 'Tunnel ready' /tmp/jia-expo-preview.log; then
-                # SDK 54 redirects from this endpoint to the Expo Go deep link.
-                preview_url=$(curl --silent --max-time 3 --output /dev/null --dump-header - 'http://localhost:8081/_expo/link?platform=ios' | sed -nE 's/^[Ll]ocation:[[:space:]]*(exp:\/\/[^[:space:]]+).*/\1/p' | tr -d '\r' | head -n 1 || true)
-                if [[ "$preview_url" == *localhost* || "$preview_url" == *127.0.0.1* ]]; then
-                  preview_url=""
-                fi
-                if [ -n "$preview_url" ]; then
-                  break
-                fi
+
+              preview_url=$(curl --silent --max-time 2 --output /dev/null --dump-header -                 'http://127.0.0.1:8081/_expo/link?platform=ios'                 | sed -nE 's/^[Ll]ocation:[[:space:]]*(exp:\/\/[^[:space:]]+).*/\1/p'                 | tr -d '\r' | head -n 1 || true)
+
+              if [ -n "$preview_url" ] && [[ "$preview_url" != *localhost* ]] && [[ "$preview_url" != *127.0.0.1* ]]; then
+                break
               fi
+              preview_url=""
               sleep 2
             done
+
             if [ -n "$preview_url" ]; then
               break
             fi
-            cat /tmp/jia-expo-preview.log
-            echo "Expo link response headers (for diagnosis):"
-            curl --silent --max-time 3 --output /dev/null --dump-header - 'http://localhost:8081/_expo/link?platform=ios' || true
-            kill "$server_pid" 2>/dev/null || true
-            wait "$server_pid" 2>/dev/null || true
-            if [ "$startup" -lt 3 ]; then
-              sleep 5
-            fi
+
+            echo "Attempt $startup did not produce a usable iPhone link."
+            tail -n 120 /tmp/jia-expo-preview.log || true
+            cleanup
+            server_pid=""
+            sleep 3
           done
+
           if [ -z "$preview_url" ]; then
-            echo "Could not start Expo tunnel or extract its iPhone link after 3 attempts."
+            echo "Expo tunnel did not become usable within the short retry window."
+            echo "Failing now instead of waiting 45 minutes."
             exit 1
           fi
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
           echo "Open on your iPhone while this workflow is running: $preview_url"
           {
             echo "## 家 · iPhone 测试"
@@ -85,6 +96,11 @@ jobs:
             echo ""
             echo "[$preview_url]($preview_url)"
             echo ""
-            echo "此链接只在本次工作流运行期间有效，最长约 45 分钟。"
+            echo "此链接只在本次工作流运行期间有效。"
           } >> "$GITHUB_STEP_SUMMARY"
-          wait "$server_pid"
+
+          # Keep the temporary preview alive for up to five minutes.
+          for keepalive in {1..150}; do
+            kill -0 "$server_pid" 2>/dev/null || break
+            sleep 2
+          done
