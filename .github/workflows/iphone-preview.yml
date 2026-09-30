@@ -13,7 +13,7 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CI: "1"
       EXPO_TOKEN: ${{ secrets.EXRO_TOKEN }}
@@ -21,7 +21,7 @@ jobs:
       - name: Check Expo access
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo "Add the EXRO_TOKEN repository secret from the liupengcheng520 Expo account first."
+            echo "Add the EXRO_TOKEN repository secret first."
             exit 1
           fi
       - uses: actions/checkout@v4
@@ -33,74 +33,58 @@ jobs:
         run: npm ci
       - name: Install Expo tunnel
         run: npm install --global '@expo/ngrok@^4.1.0'
-      - name: Start preview and show iPhone link
+      - name: Start real Expo tunnel and show iPhone link
         shell: bash
-        timeout-minutes: 8
+        timeout-minutes: 10
         run: |
           set -uo pipefail
-          preview_url=""
-          server_pid=""
-
+          LOG=/tmp/jia-expo-preview.log
+          : > "$LOG"
+          CI=1 npx expo start --go --tunnel --port 8081 > "$LOG" 2>&1 &
+          server_pid=$!
           cleanup() {
-            if [ -n "$server_pid" ]; then
-              kill "$server_pid" 2>/dev/null || true
-              wait "$server_pid" 2>/dev/null || true
-            fi
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
           }
           trap cleanup EXIT
 
-          for startup in 1 2; do
-            : > /tmp/jia-expo-preview.log
-            echo "Starting Expo tunnel (attempt $startup of 2)"
+          preview_url=""
+          for attempt in {1..90}; do
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              echo "Expo exited during startup."
+              tail -n 160 "$LOG" || true
+              exit 1
+            fi
 
-            CI=1 npx expo start --go --tunnel --port 8081 > /tmp/jia-expo-preview.log 2>&1 &
-            server_pid=$!
-
-            for attempt in {1..60}; do
-              if ! kill -0 "$server_pid" 2>/dev/null; then
-                echo "Expo exited during startup."
-                break
-              fi
-
-              preview_url=$(curl --silent --max-time 2 --output /dev/null --dump-header -                 'http://127.0.0.1:8081/_expo/link?platform=ios'                 | sed -nE 's/^[Ll]ocation:[[:space:]]*(exp:\/\/[^[:space:]]+).*/\1/p'                 | tr -d '\r' | head -n 1 || true)
-
-              if [ -n "$preview_url" ] && [[ "$preview_url" != *localhost* ]] && [[ "$preview_url" != *127.0.0.1* ]]; then
-                break
-              fi
-              preview_url=""
-              sleep 2
-            done
-
+            # Expo prints the real public tunnel URL to its startup log.
+            preview_url=$(grep -Eo 'exp://[^[:space:]]+' "$LOG" | grep -Ev 'localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.' | tail -n 1 || true)
             if [ -n "$preview_url" ]; then
               break
             fi
-
-            echo "Attempt $startup did not produce a usable iPhone link."
-            tail -n 120 /tmp/jia-expo-preview.log || true
-            cleanup
-            server_pid=""
-            sleep 3
+            sleep 2
           done
 
+          echo "----- Expo startup log -----"
+          tail -n 160 "$LOG" || true
+
           if [ -z "$preview_url" ]; then
-            echo "Expo tunnel did not become usable within the short retry window."
-            echo "Failing now instead of waiting 45 minutes."
+            echo "No public Expo tunnel URL was produced."
             exit 1
           fi
 
-          echo "Open on your iPhone while this workflow is running: $preview_url"
+          echo "PUBLIC_IPHONE_LINK=$preview_url"
           {
-            echo "## 家 · iPhone 测试"
+            echo "## 家 · iPhone 真机测试"
             echo ""
-            echo "在 iPhone 上打开这个链接（Expo Go 已登录 liupengcheng520）："
+            echo "Expo Go 打开下面这个公网链接："
             echo ""
             echo "[$preview_url]($preview_url)"
             echo ""
-            echo "此链接只在本次工作流运行期间有效。"
+            echo "这个链接只在本次工作流运行期间有效。"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # Keep the temporary preview alive for up to five minutes.
-          for keepalive in {1..150}; do
+          # Keep the public tunnel alive for eight minutes.
+          for keepalive in {1..240}; do
             kill -0 "$server_pid" 2>/dev/null || break
             sleep 2
           done
