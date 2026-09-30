@@ -12,39 +12,34 @@
         "NSCameraUsageDescription": "用于拍摄家庭照片、视频和扫描老照片。",
         "NSMicrophoneUsageDescription": "用于你主动录制跟读声音和人生故事。",
         "CFBundleDevelopmentRegion": "zh-Hans",
-        "CFBundleLocalizations": [
-          "zh-Hans"
-        ]
+        "CFBundleLocalizations": ["zh-Hans"]
       },
       "buildNumber": "1"
     },
     "android": {
       "package": "com.jia.familymemory",
       "versionCode": 1,
-      "permissions": [
-        "CAMERA",
-        "RECORD_AUDIO"
-      ],
+      "permissions": ["CAMERA", "RECORD_AUDIO"],
       "adaptiveIcon": {
         "backgroundColor": "#FBF4E9"
       }
     },
+    "web": {
+      "output": "single"
+    },
+    "experiments": {
+      "baseUrl": "/-jia-family"
+    },
     "plugins": [
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "允许「家」选择你主动添加的家庭照片和视频。",
-          "cameraPermission": "允许「家」拍摄家庭照片、视频和扫描老照片。"
-        }
-      ],
-      [
-        "expo-audio",
-        {
-          "microphonePermission": "允许「家」录制你主动留下的声音。",
-          "enableBackgroundRecording": false,
-          "enableBackgroundPlayback": false
-        }
-      ],
+      ["expo-image-picker", {
+        "photosPermission": "允许「家」选择你主动添加的家庭照片和视频。",
+        "cameraPermission": "允许「家」拍摄家庭照片、视频和扫描老照片。"
+      }],
+      ["expo-audio", {
+        "microphonePermission": "允许「家」录制你主动留下的声音。",
+        "enableBackgroundRecording": false,
+        "enableBackgroundPlayback": false
+      }],
       "expo-secure-store",
       "expo-video"
     ],
