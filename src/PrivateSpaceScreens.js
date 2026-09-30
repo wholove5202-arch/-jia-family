@@ -28,16 +28,16 @@ export function MissYouScreen({deceased=[],entries=[],onAdd}){
 }
 
 export function LegacyGrantEditor({privateItems=[],members=[],onSave}){
- const [contentId,setContent]=useState(null),[recipients,setRecipients]=useState([]),[mode,setMode]=useState("after_death_confirmation");
+ const [aiFilmAllowed,setFilm]=useState(false),[date,setDate]=useState(""),[contentId,setContent]=useState(null),[recipients,setRecipients]=useState([]),[mode,setMode]=useState("after_death_confirmation");
  const toggle=id=>setRecipients(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
  return <ScrollView contentContainerStyle={s.page}><Text style={s.title}>身后传承 · 逐项授权</Text>
   <Text style={s.sub}>不是开放整个私密空间，而是由你一项一项决定。</Text>
-  <Card><Text style={s.h}>① 选择要留下的内容</Text>{privateItems.map(x=><TouchableOpacity key={x.id} style={s.person} onPress={()=>setContent(x.id)}><Text>{contentId===x.id?"✓ ":"○ "}{x.title||x.text?.slice(0,16)||"私密内容"}</Text></TouchableOpacity>)}</Card>
+  <Card><Text style={s.h}>① 选择要留下的内容</Text>{privateItems.map(x=><TouchableOpacity key={x.id} style={s.person} onPress={()=>{setContent(x.id);setFilm(false);}}><Text>{contentId===x.id?"✓ ":"○ "}{x.title||x.text?.slice(0,16)||"私密内容"}</Text></TouchableOpacity>)}</Card>
   <Card><Text style={s.h}>② 指定给谁</Text>{members.map(m=><TouchableOpacity key={m.id} style={s.person} onPress={()=>toggle(m.id)}><Text>{recipients.includes(m.id)?"✓ ":"○ "}{m.name}</Text><Text style={s.small}>{m.relation||""}</Text></TouchableOpacity>)}</Card>
   <Card><Text style={s.h}>③ 什么时候开放</Text>
    <TouchableOpacity style={s.person} onPress={()=>setMode("after_death_confirmation")}><Text>{mode==="after_death_confirmation"?"✓ ":"○ "}身故多人确认完成后</Text></TouchableOpacity>
    <TouchableOpacity style={s.person} onPress={()=>setMode("date_after_death")}><Text>{mode==="date_after_death"?"✓ ":"○ "}身故后指定日期</Text></TouchableOpacity></Card>
-  <Btn title="确认这项传承设置" onPress={()=>{if(contentId&&recipients.length)onSave?.({id:`grant_${Date.now()}`,contentId,recipientIds:recipients,releaseMode:mode})}}/>
+  {mode==='date_after_death'&&<TextInput style={s.area} value={date} onChangeText={setDate} placeholder="开放日期 YYYY-MM-DD"/>}<Card><Text style={s.h}>④ AI 故事与影片用途</Text><TouchableOpacity style={s.person} onPress={()=>setFilm(v=>!v)}><Text>{aiFilmAllowed?'✓ ':'○ '}允许这项内容用于身后故事 / 影片</Text></TouchableOpacity><Text style={s.notice}>仅对这一项授权。实际 AI 服务尚未接入。</Text></Card><Btn title="确认这项传承设置" onPress={()=>{if(!contentId||!recipients.length){Alert.alert("请选择内容和接收人");return;}if(mode==="date_after_death"&&(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)){Alert.alert("请填写有效开放日期");return;}onSave?.({id:`grant_${Date.now()}`,contentId,recipientIds:recipients,releaseMode:mode,releaseDate:mode==="date_after_death"?date:null,aiFilmAllowed})}}/>
   <Text style={s.notice}>未选择、未授权的私密内容继续永久私密。确认身故的人也不会自动获得查看权。</Text>
  </ScrollView>
 }

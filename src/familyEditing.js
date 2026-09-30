@@ -16,7 +16,7 @@ export function validateParents(members,id,fatherId,motherId){
   while(stack.length){const pid=stack.pop();if(pid===id)throw new Error('这个关系会形成循环，请重新选择');if(seen.has(pid))continue;seen.add(pid);const p=members.find(x=>x.id===pid);if(p)stack.push(...[p.fatherId,p.motherId].filter(Boolean));}
  }
 }
-export function addRelative(members,anchorId,relation,record,{half=false,parentSide='father'}={}){
+export function addRelative(members,anchorId,relation,record,{half=false,parentSide='father',priorStatus='divorced'}={}){
  const anchor=members.find(p=>p.id===anchorId);
  if(!anchor)throw new Error('请先选择要添加关系的家人');
  if(!record?.id||!record.name?.trim())throw new Error('请填写姓名');
@@ -25,13 +25,17 @@ export function addRelative(members,anchorId,relation,record,{half=false,parentS
  if(!next.some(p=>p.id===record.id))next.push({...record,name:record.name.trim(),claimed:false});
  const a=next.find(p=>p.id===anchorId),b=next.find(p=>p.id===record.id);
  const assign=(p,field,value)=>{if(p[field]&&p[field]!==value)throw new Error('已有不同的父母资料，请到编辑关系中确认修改');p[field]=value;};
- if(relation==='father'||relation==='mother')assign(a,relation==='father'?'fatherId':'motherId',b.id);
- else if(relation==='spouse'){
+ if(relation==='father'||relation==='mother'){const key=relation==='father'?'fatherId':'motherId';assign(a,key,b.id);for(const l of a.siblingLinks||[]){if(l.kind==='full'||l.kind===relation){const sibling=next.find(p=>p.id===l.personId);if(sibling)assign(sibling,key,b.id);}}}
+ else if(relation==='spouse'||relation==='remarry'){
   if([a.fatherId,a.motherId].includes(b.id)||[b.fatherId,b.motherId].includes(a.id))throw new Error('父母或子女不能添加为配偶');
+  if(relation==='spouse'&&(a.spouseIds||[]).some(id=>id!==b.id))throw new Error('已有配偶，请选择续配 / 再婚');
+  if((b.spouseIds||[]).some(id=>id!==a.id))throw new Error('对方已有配偶，请先确认其婚姻状态');
+  if(relation==='remarry'){for(const id of a.spouseIds||[]){const old=next.find(p=>p.id===id);if(priorStatus==='widowed'&&!old?.dead)throw new Error('配偶尚未标记已故，请先确认状态');if(old){old.spouseIds=(old.spouseIds||[]).filter(id=>id!==a.id);old.marriages=[...(old.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:priorStatus}];}a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==id),{personId:id,status:priorStatus}];}a.spouseIds=[];}
+  a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==b.id),{personId:b.id,status:'married'}];b.marriages=[...(b.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:'married'}];
   a.spouseIds=[...new Set([...(a.spouseIds||[]),b.id])];b.spouseIds=[...new Set([...(b.spouseIds||[]),a.id])];
  }else if(relation==='son'||relation==='daughter')assign(b,parentSide==='mother'?'motherId':'fatherId',a.id);
- else if(relation==='sibling'){
-  if(!a.fatherId&&!a.motherId)throw new Error('先给这位家人添加父亲或母亲，再添加兄弟姐妹');
+ else if(['sibling','brother','sister'].includes(relation)){
+  const kind=half?parentSide:'full';a.siblingLinks=[...(a.siblingLinks||[]).filter(l=>l.personId!==b.id),{personId:b.id,kind}];b.siblingLinks=[...(b.siblingLinks||[]).filter(l=>l.personId!==a.id),{personId:a.id,kind}];
   if(half){const key=parentSide==='mother'?'motherId':'fatherId';if(!a[key])throw new Error('请先补充共同父亲或母亲');assign(b,key,a[key]);}
   else {if(a.fatherId)assign(b,'fatherId',a.fatherId);if(a.motherId)assign(b,'motherId',a.motherId);}
  }else throw new Error('请选择家庭关系');
@@ -48,4 +52,8 @@ export function treeRows(members,focusId='me'){
  const children=members.filter(p=>p.fatherId===focus.id||p.motherId===focus.id);
  const grandparents=unique(parents.flatMap(p=>[p.fatherId,p.motherId]));
  return !children.length&&grandparents.length?[grandparents,parents,middle]:[parents,middle,children];
+}
+
+export function endMarriage(members,aId,bId,status='divorced'){
+ return members.map(p=>[aId,bId].includes(p.id)?{...p,spouseIds:(p.spouseIds||[]).filter(id=>id!==(p.id===aId?bId:aId)),marriages:[...(p.marriages||[]).filter(m=>m.personId!==(p.id===aId?bId:aId)),{personId:p.id===aId?bId:aId,status}]}:p);
 }

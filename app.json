@@ -9,7 +9,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "用于选择并保存家庭照片和视频到「家」。",
-        "NSCameraUsageDescription": "用于拍摄家庭照片、视频和扫描老照片。"
+        "NSCameraUsageDescription": "用于拍摄家庭照片、视频和扫描老照片。",
+        "NSMicrophoneUsageDescription": "用于你主动录制跟读声音和人生故事。"
       },
       "buildNumber": "1"
     },
@@ -17,7 +18,8 @@
       "package": "com.jia.familymemory",
       "versionCode": 1,
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#FBF4E9"
@@ -30,7 +32,17 @@
           "photosPermission": "允许「家」选择你主动添加的家庭照片和视频。",
           "cameraPermission": "允许「家」拍摄家庭照片、视频和扫描老照片。"
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "允许「家」录制你主动留下的声音。",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-secure-store",
+      "expo-video"
     ],
     "userInterfaceStyle": "light",
     "scheme": "jia",
