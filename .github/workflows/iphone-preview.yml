@@ -17,6 +17,8 @@ jobs:
     env:
       CI: "1"
       EXPO_TOKEN: ${{ secrets.EXRO_TOKEN }}
+      EXPO_NO_DEVTOOLS: "1"
+      EXPO_OFFLINE: "0"
     steps:
       - name: Check Expo access
         run: |
@@ -40,11 +42,10 @@ jobs:
           set -euo pipefail
           echo "Starting Expo tunnel..."
           set +e
-          timeout 8m script -q -f -e -c "env -u CI npx expo start --go --tunnel --port 8081" /dev/null
+          timeout 8m script -q -f -e -c "env -u CI EXPO_NO_DEVTOOLS=1 npx expo start --go --tunnel --port 8081" /dev/null
           code=$?
           set -e
 
-          # timeout=124 means the preview stayed alive for the full test window.
           if [ "$code" -eq 124 ]; then
             echo "Expo preview window finished normally."
             exit 0
