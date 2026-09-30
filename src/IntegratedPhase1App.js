@@ -23,8 +23,9 @@ import {JournalScreen,ImportantDaysScreen} from './JournalScreens';
 import {HonorsScreen,TimelineScreen,AdviceScreen,MemorialMemoriesScreen} from './ProfileMemoryScreens';
 import PrivateAccessScreen from './PrivateAccessScreen';
 import VoiceMemoryScreen from './VoiceMemoryScreen';
+import FutureLetterScreen from './FutureLetterScreen';
 import {endMarriage} from './familyEditing';
-const privateScreens=new Set(['private','privateMedia','privateNotes','miss','legacy','life','voice','password']);
+const privateScreens=new Set(['private','privateMedia','privateNotes','miss','legacy','life','voice','password','futureLetter']);
 const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
 const seedFamily={id:"f1",name:"我们的家",members:[
  {id:"p1",name:"爸爸",relation:"父亲",fatherId:"p5",claimed:true,isDemo:true,dead:false},
@@ -35,7 +36,7 @@ const seedFamily={id:"f1",name:"我们的家",members:[
 ],media:[],chat:[],notes:[]};
 
 const defaultPub={schemaVersion:4,activeFamilyId:"f1",families:[seedFamily],avatarHistory:[],deathCases:[]};
-const defaultPriv={schemaVersion:1,aiAllowed:false,privateNotes:[],missYou:[],legacyGrants:[],privateMedia:[]};
+const defaultPriv={schemaVersion:1,aiAllowed:false,privateNotes:[],missYou:[],legacyGrants:[],privateMedia:[],futureLetters:[]};
 
 export default function IntegratedPhase1App(){
  const {pub,setPub,priv,setPriv,ready,error}=useSeparatedPersistence(defaultPub,defaultPriv);
@@ -83,8 +84,7 @@ export default function IntegratedPhase1App(){
  const Person=()=> <PersonProfileScreen person={person} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onRelation={()=>setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
 
  const Private=()=> <ScrollView contentContainerStyle={[s.page,{backgroundColor:"#F8F2FB"}]}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><JiaIcon name="lock"/><Text style={s.heroT}>私密空间</Text></View><Text style={s.muted}>独立保存 · 家主不可查看 · 默认不进入 AI</Text>
-  <Action title="设置二级密码" onPress={()=>setScreen("password")}/><Action title="人生轨迹 / 我的故事" onPress={()=>setScreen("life")}/><Action title="留下我的声音" onPress={()=>setScreen("voice")}/><Action title="非公开相册" onPress={()=>setScreen("privateMedia")}/>
-  <Action title="个人记事本" onPress={()=>setScreen("privateNotes")}/><Action title="想念TA" onPress={()=>setScreen("miss")}/><Action title="身后传承设置" onPress={()=>setScreen("legacy")}/>
+  <Action title="二级密码（可选）" onPress={()=>setScreen("password")}/><Action title="写给未来的一封信" onPress={()=>setScreen("futureLetter")}/><Action title="非公开相册" onPress={()=>setScreen("privateMedia")}/><Action title="想念TA" onPress={()=>setScreen("miss")}/>
  </ScrollView>;
 
  let body;
@@ -106,6 +106,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="chat")body=<FamilyChatMediaScreen family={family} onPatch={patchFamily}/>;
  else if(screen==="notes")body=<JournalScreen title="家庭动态 / 记事" hint="用文字、图片和视频留下家庭的共同记忆。" items={family.notes||[]} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
  else if(screen==="private")body=<Private/>;
+ else if(screen==="futureLetter")body=<FutureLetterScreen items={priv.futureLetters||[]} onSave={x=>setPriv(p=>({...p,futureLetters:[x,...(p.futureLetters||[])]}))}/>;
  else if(screen==="privateMedia")body=<PrivateMediaScreen items={priv.privateMedia||[]} onAdd={items=>setPriv(p=>({...p,aiAllowed:false,privateMedia:[...items,...(p.privateMedia||[])]}))}/>;
  else if(screen==="privateNotes")body=<JournalScreen title="个人记事本" hint="仅自己可见 · 可打开查看和编辑 · 不进入 AI" items={priv.privateNotes||[]} onSave={n=>setPriv(p=>({...p,privateNotes:[{...n,aiAllowed:false},...(p.privateNotes||[]).filter(x=>x.id!==n.id)]}))}/>;
  else if(screen==="miss")body=<MissYouScreen deceased={deceased} entries={priv.missYou} onAdd={x=>setPriv(p=>({...p,missYou:[x,...p.missYou]}))}/>;
