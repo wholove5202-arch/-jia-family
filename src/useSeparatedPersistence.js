@@ -1,6 +1,7 @@
 
 import {useEffect,useRef,useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {migrateSeedAncestor} from './familyDataMigration';
 import {readPrivate,writePrivate} from './securePrivateStorage';
 const PUB="jia_phase1_public_v4", PRIV="jia_phase1_private_v4";
 
@@ -12,7 +13,7 @@ export function useSeparatedPersistence(defaultPublic,defaultPrivate){
  useEffect(()=>{(async()=>{
   try{
    const [a,b]=await Promise.all([AsyncStorage.getItem(PUB),readPrivate(PRIV)]);
-   if(a)setPub({...defaultPublic,...JSON.parse(a)});
+   if(a)setPub(migrateSeedAncestor({...defaultPublic,...JSON.parse(a)}));
    if(b)setPriv({...defaultPrivate,...JSON.parse(b),aiAllowed:false});
   }catch(e){setError(e.message);}finally{loaded.current=true;setReady(true)}
  })()},[]);

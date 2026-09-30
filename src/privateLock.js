@@ -7,7 +7,7 @@ const read=()=>Platform.OS==='web'?AsyncStorage.getItem(KEY):SecureStore.getItem
 const write=x=>Platform.OS==='web'?AsyncStorage.setItem(KEY,x):SecureStore.setItemAsync(KEY,x);
 export async function lockConfigured(){return !!await read();}
 export async function setPrivatePassword(password){
- if(password.length<8)throw new Error('密码至少 8 位');
+ if(!/^\d{4,8}$/.test(password))throw new Error('密码应为 4 至 8 位数字');
  const salt=Crypto.randomUUID();const hash=await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256,salt+password);
  await write(JSON.stringify({salt,hash,failures:0,blockedUntil:0}));
 }

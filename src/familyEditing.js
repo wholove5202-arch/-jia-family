@@ -57,3 +57,10 @@ export function treeRows(members,focusId='me'){
 export function endMarriage(members,aId,bId,status='divorced'){
  return members.map(p=>[aId,bId].includes(p.id)?{...p,spouseIds:(p.spouseIds||[]).filter(id=>id!==(p.id===aId?bId:aId)),marriages:[...(p.marriages||[]).filter(m=>m.personId!==(p.id===aId?bId:aId)),{personId:p.id===aId?bId:aId,status}]}:p);
 }
+
+// Removing a profile only detaches links. Shared photographs and other people's records remain.
+export function removePerson(members,id){
+ const person=members.find(p=>p.id===id);
+ if(!person||id==='me'||!mayEditPerson(person))throw new Error('这个人物不能由你删除');
+ return members.filter(p=>p.id!==id).map(p=>({...p,fatherId:p.fatherId===id?null:p.fatherId,motherId:p.motherId===id?null:p.motherId,spouseIds:(p.spouseIds||[]).filter(x=>x!==id),siblingLinks:(p.siblingLinks||[]).filter(x=>x.personId!==id),marriages:(p.marriages||[]).filter(x=>x.personId!==id)}));
+}

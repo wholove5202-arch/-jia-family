@@ -1,6 +1,6 @@
 
 import React,{useMemo,useState,useRef,useEffect} from "react";
-import {SafeAreaView,View,Text,TouchableOpacity,ScrollView,StyleSheet,ActivityIndicator,Alert,ImageBackground,AppState,BackHandler,Platform} from "react-native";
+import {SafeAreaView,View,Text,TouchableOpacity,ScrollView,StyleSheet,ActivityIndicator,Alert,ImageBackground,AppState,Keyboard,BackHandler,Platform} from "react-native";
 import {FamilyManagerScreen,DynamicTreeScreen,IndexedAlbumScreen,PersonRelationSummary} from "./Phase1CoreScreens";
 import {DeathConfirmationScreen,RelationshipEditor} from "./Phase1WorkflowScreens";
 import {PrivateNotebookScreen,MissYouScreen,LegacyGrantEditor} from "./PrivateSpaceScreens";
@@ -23,7 +23,7 @@ import {JournalScreen,ImportantDaysScreen} from './JournalScreens';
 import {HonorsScreen,TimelineScreen,AdviceScreen,MemorialMemoriesScreen} from './ProfileMemoryScreens';
 import PrivateAccessScreen from './PrivateAccessScreen';
 import VoiceMemoryScreen from './VoiceMemoryScreen';
-import {endMarriage} from './familyEditing';
+import {endMarriage,removePerson} from './familyEditing';
 const privateScreens=new Set(['private','privateMedia','privateNotes','miss','legacy','life','voice','password']);
 const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
 const seedFamily={id:"f1",name:"我们的家",members:[
@@ -39,15 +39,19 @@ const defaultPriv={schemaVersion:1,aiAllowed:false,privateNotes:[],missYou:[],le
 
 export default function IntegratedPhase1App(){
  const {pub,setPub,priv,setPriv,ready,error}=useSeparatedPersistence(defaultPub,defaultPriv);
- const [treeFocusId,setTreeFocusId]=useState("me"),[relativeAnchor,setRelativeAnchor]=useState(null);
+ const [profileTab,setProfileTab]=useState("info"),[keyboardOpen,setKeyboardOpen]=useState(false),[treeFocusId,setTreeFocusId]=useState("me"),[relativeAnchor,setRelativeAnchor]=useState(null);
  const [screen,rawSetScreen]=useState("welcome"),[person,setPerson]=useState(null),[selectedMedia,setSelectedMedia]=useState(null),[deathCase,setDeathCase]=useState(null),[actingMemberId,setActingMemberId]=useState("me");
- const history=useRef([]),current=useRef('welcome'),[unlocked,setUnlocked]=useState(false),pending=useRef('private');
+ const childBack=useRef(null);const history=useRef([]),current=useRef('welcome'),[unlocked,setUnlocked]=useState(false),pending=useRef('private');
 
- const setScreen=next=>{if(next===current.current)return;if(privateScreens.has(next)&&!unlocked){pending.current=next;next='unlock';}if(!privateScreens.has(next)&&next!=='unlock')setUnlocked(false);history.current.push({screen:current.current,person});current.current=next;rawSetScreen(next);};
- const back=()=>{const prev=history.current.pop()||{screen:'home',person:null};let target=prev.screen;if(privateScreens.has(target)&&!unlocked){pending.current=target;target='unlock';}if(!privateScreens.has(target)&&target!=='unlock')setUnlocked(false);setPerson(p=>p?.id===prev.person?.id?p:prev.person);current.current=target;rawSetScreen(target);};
- const goTab=next=>{history.current=[];if(privateScreens.has(current.current))setUnlocked(false);current.current=next;rawSetScreen(next);};
+ const setScreen=next=>{if(next===current.current)return;if(privateScreens.has(next)&&!unlocked){pending.current=next;next='unlock';}history.current.push({screen:current.current,person});current.current=next;rawSetScreen(next);};
+ const back=()=>{Keyboard.dismiss();if(childBack.current){childBack.current();return;}const prev=history.current.pop()||{screen:'home',person:null};let target=prev.screen;if(privateScreens.has(target)&&!unlocked){pending.current=target;target='unlock';}setPerson(p=>p?.id===prev.person?.id?p:prev.person);current.current=target;rawSetScreen(target);};
+ const goTab=next=>{Keyboard.dismiss();childBack.current=null;history.current=[];current.current=next;rawSetScreen(next);};
  useEffect(()=>{const sub=AppState.addEventListener('change',state=>{if(state==='background'){setUnlocked(false);if(privateScreens.has(current.current)){pending.current=current.current;current.current='unlock';rawSetScreen('unlock');}}});return ()=>sub.remove();},[]);
  useEffect(()=>{if(Platform.OS!=='android')return;const sub=BackHandler.addEventListener('hardwareBackPress',()=>{if(current.current==='home'&&!history.current.length)return false;back();return true;});return ()=>sub.remove();},[screen,unlocked]);
+ useEffect(()=>{const show=Keyboard.addListener('keyboardDidShow',()=>setKeyboardOpen(true));const hide=Keyboard.addListener('keyboardDidHide',()=>setKeyboardOpen(false));return ()=>{show.remove();hide.remove();};},[]);
+ const registerBack=handler=>{childBack.current=handler;};
+ const savePrivate=(key,n,grant)=>setPriv(p=>({...p,[key]:[{...n,aiAllowed:false},...(p[key]||[]).filter(x=>x.id!==n.id)],legacyGrants:[...(p.legacyGrants||[]).filter(g=>g.contentId!==n.id),...(grant?[{...grant,id:grant.id||`grant_${n.id}`,contentId:n.id}]:[])]}));
+ const deletePrivate=(key,id)=>setPriv(p=>({...p,[key]:(p[key]||[]).filter(n=>n.id!==id),legacyGrants:(p.legacyGrants||[]).filter(g=>g.contentId!==id)}));
  const unlock=()=>{setUnlocked(true);current.current=pending.current;rawSetScreen(pending.current);};
  const family=useMemo(()=>{const f=pub.families.find(f=>f.id===pub.activeFamilyId)||pub.families[0];if(!f)return f;const demos={p1:"爸爸",p2:"妈妈",p4:"姐姐",p5:"爷爷"};return {...f,members:(f.members||[]).map(p=>f.id==="f1"&&demos[p.id]===p.name&&!p.ownerId?{...p,isDemo:true}:p)};},[pub]);
  const patchFamily=patch=>setPub(p=>({...p,families:p.families.map(f=>f.id===family.id?{...f,...patch}:f)}));
@@ -55,7 +59,7 @@ export default function IntegratedPhase1App(){
  const deceased=family?.members?.filter(x=>x.dead)||[];
  const createFamily=name=>{const id=`f_${Date.now()}`;setPub(p=>({...p,activeFamilyId:id,families:[...p.families,{id,name,members:[{id:"me",name:"我",relation:"本人",claimed:true,dead:false}],media:[],chat:[],notes:[]}]}));setScreen("home")};
  const switchFamily=id=>{setPub(p=>({...p,activeFamilyId:id}));setPerson(null);setScreen("home")};
- const openPerson=p=>{setPerson(p);setScreen("person")};
+ const openPerson=p=>{setProfileTab('info');setPerson(p);setScreen("person")};
  const openAdd=p=>{setRelativeAnchor(p||family.members[0]);setScreen("addRelative")};
  const finishPerson=p=>{if(history.current.at(-1)?.screen==='person')history.current.pop();setPerson(p);current.current='person';rawSetScreen('person');};
  const savePerson=p=>{updateMembers(family.members.map(x=>x.id===p.id?p:x));finishPerson(p);};
@@ -80,11 +84,12 @@ export default function IntegratedPhase1App(){
   <TouchableOpacity style={s.memoryCard} onPress={()=>setScreen("notes")}><View style={[s.memorySymbol,{backgroundColor:"#F3E8D8"}]}><JiaIcon name="notes" size={25}/></View><View style={{flex:1}}><Text style={s.memoryTitle}>家庭记事</Text><Text style={s.homeHint}>{family.notes?.length?`已有 ${family.notes.length} 条家人的故事` : "把今天值得记住的事写下来"}</Text></View><Text style={s.sectionMore}>›</Text></TouchableOpacity>
  </ScrollView>;
 
- const Person=()=> <PersonProfileScreen person={person} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onRelation={()=>setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
+ const personView=person?<PersonProfileScreen person={person} members={family.members} family={family} initialTab={profileTab} onTab={setProfileTab} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onRelation={()=>setScreen("relation")} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onSaveHonors={honors=>{const np={...person,honors};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}} onDelete={()=>Alert.alert('删除 '+person.name+'？','仅移除人物及其关系连线，家庭相册原件和其他人的档案会保留。',[{text:'取消'},{text:'删除人物',style:'destructive',onPress:()=>{try{updateMembers(removePerson(family.members,person.id));setPerson(null);history.current=[];current.current='tree';rawSetScreen('tree');}catch(e){Alert.alert('不能删除',e.message);}}}])}/>:null;
 
  const Private=()=> <ScrollView contentContainerStyle={[s.page,{backgroundColor:"#F8F2FB"}]}><View style={{flexDirection:"row",alignItems:"center",gap:10}}><JiaIcon name="lock"/><Text style={s.heroT}>私密空间</Text></View><Text style={s.muted}>独立保存 · 家主不可查看 · 默认不进入 AI</Text>
-  <Action title="设置二级密码" onPress={()=>setScreen("password")}/><Action title="人生轨迹 / 我的故事" onPress={()=>setScreen("life")}/><Action title="留下我的声音" onPress={()=>setScreen("voice")}/><Action title="非公开相册" onPress={()=>setScreen("privateMedia")}/>
-  <Action title="个人记事本" onPress={()=>setScreen("privateNotes")}/><Action title="想念TA" onPress={()=>setScreen("miss")}/><Action title="身后传承设置" onPress={()=>setScreen("legacy")}/>
+  <Action title="设置二级密码" onPress={()=>setScreen("password")}/><Action title="人生轨迹 / 我的故事" onPress={()=>setScreen("life")}/><Action title="我的声音档案" onPress={()=>setScreen("voice")}/><Action title="非公开相册" onPress={()=>setScreen("privateMedia")}/>
+  <Action title="个人记事本" onPress={()=>setScreen("privateNotes")}/><Action title="想念TA" onPress={()=>setScreen("miss")}/><Action title="查看传承授权" onPress={()=>setScreen("legacy")}/>
+ <Action title="锁定私密空间" onPress={()=>{setUnlocked(false);pending.current='private';current.current='unlock';rawSetScreen('unlock');}}/>
  </ScrollView>;
 
  let body;
@@ -98,30 +103,30 @@ export default function IntegratedPhase1App(){
  else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
- else if(screen==="person")body=<Person/>;
+ else if(screen==="person")body=personView;
  else if(screen==="relation")body=<ParentEditorScreen key={person.id} onBack={back} person={person} members={family.members} onMarriage={(id,status)=>{const members=endMarriage(family.members,person.id,id,status);updateMembers(members);setPerson(members.find(x=>x.id===person.id));Alert.alert('已记录离异关系');}} onSave={r=>{const np={...person,...r};updateMembers(family.members.map(p=>p.id===person.id?np:p));finishPerson(np)}}/>;
  else if(screen==="avatar")body=<AnnualAvatarRealScreen person={person} media={family.media||[]} onConfirm={saveAvatar}/>;
  else if(screen==="death")body=<><ScrollView horizontal contentContainerStyle={{paddingHorizontal:20,paddingTop:12,gap:8}}>{family.members.filter(m=>m.id!==person?.id&&!m.dead).map(m=>{const isInitiator=m.id===deathCase?.initiatorId;const already=deathCase?.confirmations?.includes(m.id);return <TouchableOpacity key={m.id} onPress={()=>setActingMemberId(m.id)} style={[s.info,actingMemberId===m.id&&{borderWidth:2,borderColor:C.brown}]}><Text>{m.name}{isInitiator?" · 发起人":already?" · 已确认":""}</Text></TouchableOpacity>})}</ScrollView><DeathConfirmationScreen person={person} caseData={deathCase} currentMemberId={actingMemberId} onConfirm={id=>setDeathCase(v=>{const n=confirmDeath(v,id);setPub(p=>({...p,deathCases:(p.deathCases||[]).map(x=>x.id===n.id?n:x)}));if(n.status==="confirmed"){const np={...person,dead:true,memorializedAt:new Date().toISOString()};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np)}return n})} onObject={id=>setDeathCase(v=>{const n=objectDeath(v,id);setPub(p=>({...p,deathCases:(p.deathCases||[]).map(x=>x.id===n.id?n:x)}));return n})}/></>;
  else if(screen==="add")body=<UploadScreen onAdd={addMedia} onOldPhoto={()=>setScreen("restore")} onNote={()=>setScreen("notes")}/>;
  else if(screen==="chat")body=<FamilyChatMediaScreen family={family} onPatch={patchFamily}/>;
- else if(screen==="notes")body=<JournalScreen title="家庭动态 / 记事" hint="用文字、图片和视频留下家庭的共同记忆。" items={family.notes||[]} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
+ else if(screen==="notes")body=<JournalScreen title="家庭动态 / 记事" hint="用文字、图片和视频留下家庭的共同记忆。" items={family.notes||[]} onBackHandler={registerBack} onDelete={id=>patchFamily({notes:(family.notes||[]).filter(n=>n.id!==id)})} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
  else if(screen==="private")body=<Private/>;
  else if(screen==="privateMedia")body=<PrivateMediaScreen items={priv.privateMedia||[]} onAdd={items=>setPriv(p=>({...p,aiAllowed:false,privateMedia:[...items,...(p.privateMedia||[])]}))}/>;
- else if(screen==="privateNotes")body=<JournalScreen title="个人记事本" hint="仅自己可见 · 可打开查看和编辑 · 不进入 AI" items={priv.privateNotes||[]} onSave={n=>setPriv(p=>({...p,privateNotes:[{...n,aiAllowed:false},...(p.privateNotes||[]).filter(x=>x.id!==n.id)]}))}/>;
- else if(screen==="miss")body=<MissYouScreen deceased={deceased} entries={priv.missYou} onAdd={x=>setPriv(p=>({...p,missYou:[x,...p.missYou]}))}/>;
- else if(screen==="legacy")body=<LegacyGrantEditor privateItems={[...priv.privateNotes,...priv.missYou,...(priv.lifeStories||[]),...(priv.voices||[])]} members={family.members.filter(x=>x.id!=="me")} onSave={g=>{setPriv(p=>({...p,legacyGrants:[...(p.legacyGrants||[]).filter(x=>x.contentId!==g.contentId),g]}));Alert.alert("已保存","已记录这项授权；身故确认与实际释放服务尚未接入，当前不会自动公开。")}}/>;
+ else if(screen==="privateNotes")body=<JournalScreen title="个人记事本" hint="自己的记事档案 · 默认仅自己可见" privateContent members={family.members} grants={priv.legacyGrants||[]} items={priv.privateNotes||[]} onBackHandler={registerBack} onSave={(n,g)=>savePrivate('privateNotes',n,g)} onDelete={id=>deletePrivate('privateNotes',id)}/>;
+ else if(screen==="miss")body=<JournalScreen requireDeceased title="想念TA" hint="写给想念的家人 · 每一封信都会保存在档案里" privateContent members={family.members} grants={priv.legacyGrants||[]} deceased={deceased} items={priv.missYou||[]} onBackHandler={registerBack} onSave={(n,g)=>savePrivate('missYou',n,g)} onDelete={id=>deletePrivate('missYou',id)}/>;
+ else if(screen==="legacy")body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>传承授权档案</Text><Text style={s.muted}>在每条故事、记事、思念或声音的编辑页中设置开放对象与时间。</Text>{!(priv.legacyGrants||[]).length&&<Text style={s.muted}>尚未开放任何内容，全部仅自己可见。</Text>}{(priv.legacyGrants||[]).map(g=>{const all=[...priv.privateNotes,...priv.missYou,...(priv.lifeStories||[]),...(priv.voices||[])],n=all.find(n=>n.id===g.contentId),route=(priv.voices||[]).some(n=>n.id===g.contentId)?'voice':(priv.lifeStories||[]).some(n=>n.id===g.contentId)?'life':priv.missYou.some(n=>n.id===g.contentId)?'miss':'privateNotes';return <View key={g.id||g.contentId} style={s.info}><Text style={s.actionT}>{n?.title||n?.text?.slice(0,20)||'私密档案'}</Text><Text style={s.muted}>{g.recipientIds.map(id=>family.members.find(p=>p.id===id)?.name||'亲人').join('、')} · {g.releaseDate||'身故多人确认后'}</Text><Action title="打开所属档案修改" onPress={()=>setScreen(route)}/></View>})}<Text style={s.muted}>实际身后开放服务尚未接入，当前不会自动公开。</Text></ScrollView>;
  else if(screen==='unlock')body=<PrivateAccessScreen onUnlock={unlock}/>;
  else if(screen==='password')body=<PrivateAccessScreen settings onUnlock={back}/>;
  else if(screen==='days')body=<ImportantDaysScreen family={family} onSave={n=>patchFamily({anniversaries:[...(family.anniversaries||[]),n]})}/>;
- else if(screen==='life')body=<JournalScreen title="人生轨迹 / 我的故事" hint="仅自己可见，记录你的经历与秘密。需要身后开放或影片用途时，请在私密空间的身后传承中逐项授权。" life items={priv.lifeStories||[]} onSave={n=>setPriv(p=>({...p,lifeStories:[{...n,aiAllowed:false},...(p.lifeStories||[]).filter(x=>x.id!==n.id)]}))}/>;
- else if(screen==='voice')body=<VoiceMemoryScreen items={priv.voices||[]} onSave={v=>setPriv(p=>({...p,voices:[v,...(p.voices||[])]}))}/>;
+ else if(screen==='life')body=<JournalScreen title="人生轨迹 / 我的故事" hint="记录自己的经历与秘密 · 仅自己可见" life privateContent members={family.members} grants={priv.legacyGrants||[]} items={priv.lifeStories||[]} onBackHandler={registerBack} onSave={(n,g)=>savePrivate('lifeStories',n,g)} onDelete={id=>deletePrivate('lifeStories',id)}/>;
+ else if(screen==='voice')body=<VoiceMemoryScreen items={priv.voices||[]} members={family.members} grants={priv.legacyGrants||[]} onBackHandler={registerBack} onSave={(v,g)=>savePrivate('voices',v,g)} onDelete={id=>deletePrivate('voices',id)}/>;
  else if(screen==='honors')body=<HonorsScreen person={person} onSave={honors=>{const np={...person,honors};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}}/>;
  else if(screen==='timeline')body=<TimelineScreen person={person} family={family}/>;
  else if(screen==='advice')body=<AdviceScreen person={person} onSave={advice=>{const np={...person,advice};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);Alert.alert('已保存');}}/>;
  else if(screen==='memorial')body=<MemorialMemoriesScreen person={person} media={family.media||[]} onSave={memories=>{const np={...person,memories};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}}/>;
  else body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>{screen==="restore"?"老照片扫描修复":"AI回忆影片"}</Text><Text style={s.muted}>该能力保留正式入口，外部服务将在后续阶段对接。</Text></ScrollView>;
 
- return <SafeAreaView style={s.app}>{!['welcome','home','my','person','editPerson','addRelative','relation'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{!["welcome","entry"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
+ return <SafeAreaView style={s.app}>{!['welcome','home','my','person','editPerson','addRelative','relation'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{keyboardOpen&&<TouchableOpacity onPress={Keyboard.dismiss} style={{position:'absolute',top:12,right:16,padding:13,borderRadius:18,backgroundColor:C.brown,zIndex:50}}><Text style={{color:'#fff',fontWeight:'700'}}>完成 · 收起键盘</Text></TouchableOpacity>}{!["welcome","entry"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
 }
 function FamilyCover({family,onPress}){
  const firstPhoto=(family.media||[]).find(m=>m.type!=="video"&&!m.private&&m.uri)?.uri;

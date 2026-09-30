@@ -10,7 +10,11 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "用于选择并保存家庭照片和视频到「家」。",
         "NSCameraUsageDescription": "用于拍摄家庭照片、视频和扫描老照片。",
-        "NSMicrophoneUsageDescription": "用于你主动录制跟读声音和人生故事。"
+        "NSMicrophoneUsageDescription": "用于你主动录制跟读声音和人生故事。",
+        "CFBundleDevelopmentRegion": "zh-Hans",
+        "CFBundleLocalizations": [
+          "zh-Hans"
+        ]
       },
       "buildNumber": "1"
     },
