@@ -106,7 +106,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="chat")body=<FamilyChatMediaScreen family={family} onPatch={patchFamily}/>;
  else if(screen==="notes")body=<JournalScreen title="家庭动态 / 记事" hint="用文字、图片和视频留下家庭的共同记忆。" items={family.notes||[]} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
  else if(screen==="private")body=<Private/>;
- else if(screen==="futureLetter")body=<FutureLetterScreen items={priv.futureLetters||[]} onSave={x=>setPriv(p=>({...p,futureLetters:[x,...(p.futureLetters||[])]}))}/>;
+ else if(screen==="futureLetter")body=<FutureLetterScreen items={priv.futureLetters||[]} members={family?.members||[]} onSave={x=>setPriv(p=>({...p,futureLetters:[x,...(p.futureLetters||[])]}))}/>;
  else if(screen==="privateMedia")body=<PrivateMediaScreen items={priv.privateMedia||[]} onAdd={items=>setPriv(p=>({...p,aiAllowed:false,privateMedia:[...items,...(p.privateMedia||[])]}))}/>;
  else if(screen==="privateNotes")body=<JournalScreen title="个人记事本" hint="仅自己可见 · 可打开查看和编辑 · 不进入 AI" items={priv.privateNotes||[]} onSave={n=>setPriv(p=>({...p,privateNotes:[{...n,aiAllowed:false},...(p.privateNotes||[]).filter(x=>x.id!==n.id)]}))}/>;
  else if(screen==="miss")body=<MissYouScreen deceased={deceased} entries={priv.missYou} onAdd={x=>setPriv(p=>({...p,missYou:[x,...p.missYou]}))}/>;
