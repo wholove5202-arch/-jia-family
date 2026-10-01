@@ -65,7 +65,8 @@ export default function IntegratedPhase1App(){
  const personAvatar=p=>p?.avatarUri||family.media?.find(m=>m.id===publicPersonAvatar(pub,p?.id)?.mediaId)?.uri;
  const openMedia=m=>{setSelectedMedia(m);setScreen("tagMedia")};
  const saveTagged=m=>{patchFamily({media:family.media.map(x=>x.id===m.id?m:x)});setSelectedMedia(m);setScreen("album")};
- const addMedia=items=>patchFamily({media:[...(family.media||[]),...items.map(x=>({...x,albumArchived:true}))]});
+ const addMedia=items=>{patchFamily({media:[...(family.media||[]),...items.map(x=>({...x,albumArchived:true}))]});setScreen("album")};
+ const deleteMedia=id=>{patchFamily({media:(family.media||[]).filter(x=>x.id!==id)});};
  const saveAvatar=entry=>{setPub(p=>appendAvatarHistory(p,entry));Alert.alert("已更换","年度头像已保存到历史记录。");setScreen("person")};
  const avatarFor=p=>publicPersonAvatar(pub,p.id);
 
@@ -105,14 +106,14 @@ export default function IntegratedPhase1App(){
  else if(screen==="tree")body=<FamilyTreeScreen family={family} focusId={treeFocusId} onPerson={openPerson} onAdd={openAdd}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={person} onSave={savePerson} onBack={back}/>;
  else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={(members,id)=>{updateMembers(members);finishPerson(members.find(p=>p.id===id))}}/>;
- else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")} onBack={()=>setScreen("home")}/>;
+ else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")} onBack={()=>setScreen("home")} onDelete={deleteMedia}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
  else if(screen==="person")body=<Person/>;
  else if(screen==="relation")body=<ParentEditorScreen key={person.id} onBack={back} person={person} members={family.members} onMarriage={(id,status)=>{const members=endMarriage(family.members,person.id,id,status);updateMembers(members);setPerson(members.find(x=>x.id===person.id));Alert.alert('已记录离异关系');}} onSave={r=>{const np={...person,...r};updateMembers(family.members.map(p=>p.id===person.id?np:p));finishPerson(np)}}/>;
  else if(screen==="avatar")body=<AnnualAvatarRealScreen person={person} media={family.media||[]} onConfirm={saveAvatar}/>;
  else if(screen==="death")body=<><ScrollView horizontal contentContainerStyle={{paddingHorizontal:20,paddingTop:12,gap:8}}>{family.members.filter(m=>m.id!==person?.id&&!m.dead).map(m=>{const isInitiator=m.id===deathCase?.initiatorId;const already=deathCase?.confirmations?.includes(m.id);return <TouchableOpacity key={m.id} onPress={()=>setActingMemberId(m.id)} style={[s.info,actingMemberId===m.id&&{borderWidth:2,borderColor:C.brown}]}><Text>{m.name}{isInitiator?" · 发起人":already?" · 已确认":""}</Text></TouchableOpacity>})}</ScrollView><DeathConfirmationScreen person={person} caseData={deathCase} currentMemberId={actingMemberId} onConfirm={id=>setDeathCase(v=>{const n=confirmDeath(v,id);setPub(p=>({...p,deathCases:(p.deathCases||[]).map(x=>x.id===n.id?n:x)}));if(n.status==="confirmed"){const np={...person,dead:true,memorializedAt:new Date().toISOString()};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np)}return n})} onObject={id=>setDeathCase(v=>{const n=objectDeath(v,id);setPub(p=>({...p,deathCases:(p.deathCases||[]).map(x=>x.id===n.id?n:x)}));return n})}/></>;
- else if(screen==="add")body=<UploadScreen onAdd={addMedia} onOldPhoto={()=>setScreen("restore")} onMemory={()=>setScreen("memory")} isMember={isMember}/>;
+ else if(screen==="add")body=<UploadScreen onAdd={addMedia} onOldPhoto={()=>setScreen("restore")} onCancel={()=>setScreen("album")} onMemory={()=>setScreen("memory")} isMember={isMember}/>;
  else if(screen==="chat")body=<FamilyChatMediaScreen family={family} onPatch={patchFamily}/>;
  else if(screen==="memory"||screen==="notes")body=<JournalScreen title="添加一段记忆" hint="写下这件值得记住的事，也可以加入照片或视频。保存后会出现在家庭动态中。" items={family.notes||[]} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
  else if(screen==="private")body=<Private/>;
