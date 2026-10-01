@@ -14,9 +14,9 @@ async function main(){
  const editing=moduleAt('src/familyEditing.js',react);
  const rowHooks=hooks(),rowReact={...rowHooks,createElement};
  const row=moduleAt('src/FamilyMemberRow.js',rowReact);
- const ui=moduleAt('src/FamilyPeopleScreens.js',react,{'./treeLayout':layout,'./JiaIcon':()=>null,'./familyEditing':editing,'./FamilyMemberRow':{default:props=>{rowHooks.reset();return row.default(props)}}});
+ const ui=moduleAt('src/FamilyPeopleScreens.js',react,{'./treeLayout':layout,'./JiaIcon':()=>null,'./familyEditing':editing,'./FamilyMemberRow':{__esModule:true,default:props=>{rowHooks.reset();return row.default(props)}}});
  const family={name:'测试家',members:[{id:'dad',name:'爸爸'},{id:'mom',name:'妈妈'},{id:'me',name:'我',fatherId:'dad',motherId:'mom'}]};
- const render=()=>{h.reset();return flatten(ui.FamilyTreeScreen({family,onPerson(){}}))};
+ let switchCalls=[],failSwitch=false;const other={id:'f2',name:'我的小家庭',members:[]};family.id='f1'; const render=()=>{h.reset();return flatten(ui.FamilyTreeScreen({family,families:[family,other],onSelectFamily:async id=>{switchCalls.push(id);if(failSwitch)throw Error('failed')},onPerson(){}}))};
  const canvas=nodes=>nodes.find(n=>n.props.testID==='family-tree-canvas');
  let nodes=render();
  assert(!nodes.some(n=>n.props.accessibilityLabel==='居中家族树'));
@@ -45,5 +45,11 @@ async function main(){
  assert.equal(handlers.onMoveShouldSetPanResponder(event,gesture),false);handlers.onPanResponderMove(event,gesture);assert.equal(h.slots[3].x,0);
  nodes.find(n=>n.props.accessibilityLabel==='亲人列表').props.onPress();nodes=render();assert(!canvas(nodes));assert(!nodes.some(n=>n.props.accessibilityLabel==='居中家族树'));
  console.log('PASS returning to three generations locks gestures and list remains unaffected');
+ nodes.find(n=>n.props.accessibilityLabel==='搜索家人').props.onPress();nodes=render();const input=nodes.find(n=>n.props.accessibilityLabel==='搜索家人姓名或称呼');assert(input);input.props.onChangeText('爸爸');nodes=render();assert(nodes.some(n=>n.props.accessibilityLabel==='查看爸爸'));assert(!nodes.some(n=>n.props.accessibilityLabel==='查看妈妈'));
+ nodes.find(n=>n.props.accessibilityLabel==='三代').props.onPress();nodes=render();assert(!nodes.some(n=>n.props.accessibilityLabel==='搜索家人'));assert(canvas(nodes));
+ await nodes.find(n=>n.props.accessibilityLabel==='切换到我的小家庭').props.onPress();assert.deepEqual(switchCalls,['f2']);nodes=render();
+ failSwitch=true;await nodes.find(n=>n.props.accessibilityLabel==='切换到我的小家庭').props.onPress();nodes=render();assert(nodes.some(n=>text(n)==='切换失败，请再试一次'));failSwitch=false;await nodes.find(n=>n.props.accessibilityLabel==='切换到我的小家庭').props.onPress();assert.equal(switchCalls.length,3);
+ console.log('PASS direct family switch awaits save, permits retry and search is confined to relative list');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
+
