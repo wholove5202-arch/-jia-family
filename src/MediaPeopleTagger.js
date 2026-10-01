@@ -1,3 +1,4 @@
+import FamilyMemberRow from './FamilyMemberRow';
 import {theme} from './theme';
 
 import React,{useState} from "react";
@@ -10,8 +11,7 @@ export default function MediaPeopleTagger({media,members,onSave}){
  return <ScrollView contentContainerStyle={s.page}><Text style={s.title}>照片里有谁？</Text>
   <Text style={s.sub}>由家人确认人物。确认后会用于人物分类和年度头像候选，不让AI替你决定家庭事实。</Text>
   {media.type==="image"?<Image source={{uri:media.uri}} style={s.photo}/>:<View style={s.video}><Text>▶ 视频</Text></View>}
-  <View style={s.card}>{members.map(p=><TouchableOpacity key={p.id} style={s.person} onPress={()=>toggle(p.id)}>
-   <Text>{ids.includes(p.id)?"✓ ":"○ "}{p.name}{p.dead?" 🕯":""}</Text><Text style={s.muted}>{p.relation||""}</Text></TouchableOpacity>)}</View>
+  <View>{members.map(p=><FamilyMemberRow key={p.id} person={p} members={members} selected={ids.includes(p.id)} onPress={()=>toggle(p.id)}/>)}</View>
   <TouchableOpacity style={s.btn} onPress={()=>onSave?.({...media,personIds:ids,peopleConfirmed:true,peopleConfirmedAt:new Date().toISOString()})}><Text style={s.btnT}>保存人物标记</Text></TouchableOpacity>
  </ScrollView>
 }
