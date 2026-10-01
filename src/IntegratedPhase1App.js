@@ -105,7 +105,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="tree")body=<FamilyTreeScreen family={family} focusId={treeFocusId} onPerson={openPerson} onAdd={openAdd}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={person} onSave={savePerson} onBack={back}/>;
  else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={(members,id)=>{updateMembers(members);finishPerson(members.find(p=>p.id===id))}}/>;
- else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")}/>;
+ else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")} onBack={()=>setScreen("home")}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
  else if(screen==="person")body=<Person/>;
