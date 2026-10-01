@@ -1,3 +1,4 @@
+import FamilyMemberRow from './FamilyMemberRow';
 import {theme} from './theme';
 
 import React,{useState} from "react";
@@ -51,9 +52,7 @@ export function LegacySettingsScreen({members=[],settings,onSave}){
    <Text style={s.p}>不开启时，任何私密内容都不会因身故确认而自动公开。</Text>
   </Card>
   <Card><Text style={s.h}>选择传承人</Text>
-   {members.map(m=><TouchableOpacity key={m.id} style={s.person} onPress={()=>toggle(m.id)}>
-    <Text>{selected.includes(m.id)?"✓ ":"○ "}{m.name}</Text><Text style={s.small}>{m.relation||""}</Text>
-   </TouchableOpacity>)}
+   {members.map(m=><FamilyMemberRow key={m.id} person={m} members={members} selected={selected.includes(m.id)} onPress={()=>toggle(m.id)}/>)}
   </Card>
   <Card><Text style={s.h}>开放条件</Text>
    <TouchableOpacity style={s.person} onPress={()=>setMode("after_death_confirmation")}><Text>{mode==="after_death_confirmation"?"✓ ":"○ "}身故确认完成后</Text></TouchableOpacity>
@@ -69,8 +68,8 @@ export function RelationshipEditor({person,members=[],onSave}){
  const [fatherId,setFather]=useState(person?.fatherId||null),[motherId,setMother]=useState(person?.motherId||null);
  return <ScrollView contentContainerStyle={s.page}>
   <Text style={s.title}>编辑家庭关系</Text><Text style={s.sub}>{person?.name}</Text>
-  <Card><Text style={s.h}>父亲</Text>{members.filter(x=>x.id!==person?.id).map(m=><TouchableOpacity key={"f"+m.id} style={s.person} onPress={()=>setFather(m.id)}><Text>{fatherId===m.id?"✓ ":"○ "}{m.name}</Text></TouchableOpacity>)}</Card>
-  <Card><Text style={s.h}>母亲</Text>{members.filter(x=>x.id!==person?.id).map(m=><TouchableOpacity key={"m"+m.id} style={s.person} onPress={()=>setMother(m.id)}><Text>{motherId===m.id?"✓ ":"○ "}{m.name}</Text></TouchableOpacity>)}</Card>
+  <Card><Text style={s.h}>父亲</Text>{members.filter(x=>x.id!==person?.id).map(m=><FamilyMemberRow key={"f"+m.id} person={m} members={members} selected={fatherId===m.id} onPress={()=>setFather(m.id)}/>)}</Card>
+  <Card><Text style={s.h}>母亲</Text>{members.filter(x=>x.id!==person?.id).map(m=><FamilyMemberRow key={"m"+m.id} person={m} members={members} selected={motherId===m.id} onPress={()=>setMother(m.id)}/>)}</Card>
   <Text style={s.notice}>父母关系分别保存，因此可以准确表达同父异母、同母异父等真实家庭情况。</Text>
   <Btn title="确认关系" onPress={()=>onSave?.({fatherId,motherId})}/>
  </ScrollView>
