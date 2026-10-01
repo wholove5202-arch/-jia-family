@@ -14,7 +14,7 @@ async function main(){
  const editing=moduleAt('src/familyEditing.js',react);
  const rowHooks=hooks(),rowReact={...rowHooks,createElement};
  const row=moduleAt('src/FamilyMemberRow.js',rowReact);
- const ui=moduleAt('src/FamilyPeopleScreens.js',react,{'./treeLayout':layout,'./JiaIcon':()=>null,'./familyEditing':editing,'./FamilyMemberRow':{__esModule:true,default:props=>{rowHooks.reset();return row.default(props)}}});
+ const ui=moduleAt('src/FamilyPeopleScreens.js',react,{'./FamilyTreeExtras':{FamilyTreeExtras:()=>null},'./treeLayout':layout,'./JiaIcon':()=>null,'./familyEditing':editing,'./FamilyMemberRow':{__esModule:true,default:props=>{rowHooks.reset();return row.default(props)}}});
  const family={name:'测试家',members:[{id:'dad',name:'爸爸'},{id:'mom',name:'妈妈'},{id:'me',name:'我',fatherId:'dad',motherId:'mom'}]};
  let switchCalls=[],failSwitch=false;const other={id:'f2',name:'我的小家庭',members:[]};family.id='f1'; const render=()=>{h.reset();return flatten(ui.FamilyTreeScreen({family,families:[family,other],onSelectFamily:async id=>{switchCalls.push(id);if(failSwitch)throw Error('failed')},onPerson(){}}))};
  const canvas=nodes=>nodes.find(n=>n.props.testID==='family-tree-canvas');
@@ -53,3 +53,5 @@ async function main(){
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
 
+
+require('./branch-extras-check.cjs');
