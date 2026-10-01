@@ -75,11 +75,12 @@ export default function IntegratedPhase1App(){
   })}));
   finishPerson(saved);
  };
- const deletePerson=async()=>{
-  const id=person.id;
+ const deleteFamilyPerson=async id=>{
   await savePublic(state=>({...state,families:state.families.map(f=>f.id===family.id?{...f,members:removePerson(f.members,id)}:f)}));
   history.current=history.current.filter(entry=>entry.person?.id!==id&&!['editPerson','addRelative','relation'].includes(entry.screen));
-  setPerson(null);setRelativeAnchor(null);if(treeFocusId===id)setTreeFocusId('me');
+  if(person?.id===id)setPerson(null);if(relativeAnchor?.id===id)setRelativeAnchor(null);if(treeFocusId===id)setTreeFocusId('me');
+ };
+ const deletePerson=async()=>{await deleteFamilyPerson(person.id);setPerson(null);setRelativeAnchor(null);
   current.current='tree';rawSetScreen('tree');
  };
  const personAvatar=p=>p?.avatarUri||family.media?.find(m=>m.id===publicPersonAvatar(pub,p?.id)?.mediaId)?.uri;
@@ -125,7 +126,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="entry")body=<FamilyEntry onCreate={()=>setScreen("families")} onJoin={()=>setScreen("families")} onExisting={()=>setScreen("home")}/>;
  else if(screen==="home")body=<Home/>;
  else if(screen==="families")body=<FamilyManagerScreen families={pub.families} activeFamilyId={pub.activeFamilyId} onCreate={createFamily} onSwitch={switchFamily}/>;
- else if(screen==="tree")body=<FamilyTreeScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} focusId={treeFocusId} onPerson={openPerson} onAdd={openAdd} onBack={back} onSwitchFamily={()=>setScreen("families")}/>;
+ else if(screen==="tree")body=<FamilyTreeScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} focusId={treeFocusId} onDelete={deleteFamilyPerson} onPerson={openPerson} onAdd={openAdd} onBack={back} onSwitchFamily={()=>setScreen("families")}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={{...person,avatarUri:personAvatar(person)}} onSave={savePerson} onBack={back}/>;
  else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={saveRelative}/>;
  else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>{setUploadAssets([]);setScreen("add")}} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
