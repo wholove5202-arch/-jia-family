@@ -35,7 +35,7 @@ const seedFamily={id:"f1",name:"我们的家",members:[
  {id:"p5",name:"爷爷",relation:"爷爷",isDemo:true,claimed:false,dead:true}
 ],media:[],chat:[],notes:[]};
 
-const defaultPub={schemaVersion:4,activeFamilyId:"f1",families:[seedFamily],avatarHistory:[],deathCases:[]};
+const defaultPub={schemaVersion:4,activeFamilyId:"f1",membership:{active:false,plan:"free"},families:[seedFamily],avatarHistory:[],deathCases:[]};
 const defaultPriv={schemaVersion:1,aiAllowed:false,privateNotes:[],missYou:[],legacyGrants:[],privateMedia:[],futureLetters:[]};
 
 export default function IntegratedPhase1App(){
@@ -54,6 +54,7 @@ export default function IntegratedPhase1App(){
  const patchFamily=patch=>setPub(p=>({...p,families:p.families.map(f=>f.id===family.id?{...f,...patch}:f)}));
  const updateMembers=members=>patchFamily({members});
  const deceased=family?.members?.filter(x=>x.dead)||[];
+ const isMember=pub.membership?.active===true;
  const createFamily=name=>{const id=`f_${Date.now()}`;setPub(p=>({...p,activeFamilyId:id,families:[...p.families,{id,name,members:[{id:"me",name:"我",relation:"本人",claimed:true,dead:false}],media:[],chat:[],notes:[]}]}));setScreen("home")};
  const switchFamily=id=>{setPub(p=>({...p,activeFamilyId:id}));setPerson(null);setScreen("home")};
  const openPerson=p=>{setPerson(p);setScreen("person")};
@@ -111,7 +112,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="relation")body=<ParentEditorScreen key={person.id} onBack={back} person={person} members={family.members} onMarriage={(id,status)=>{const members=endMarriage(family.members,person.id,id,status);updateMembers(members);setPerson(members.find(x=>x.id===person.id));Alert.alert('已记录离异关系');}} onSave={r=>{const np={...person,...r};updateMembers(family.members.map(p=>p.id===person.id?np:p));finishPerson(np)}}/>;
  else if(screen==="avatar")body=<AnnualAvatarRealScreen person={person} media={family.media||[]} onConfirm={saveAvatar}/>;
  else if(screen==="death")body=<><ScrollView horizontal contentContainerStyle={{paddingHorizontal:20,paddingTop:12,gap:8}}>{family.members.filter(m=>m.id!==person?.id&&!m.dead).map(m=>{const isInitiator=m.id===deathCase?.initiatorId;const already=deathCase?.confirmations?.includes(m.id);return <TouchableOpacity key={m.id} onPress={()=>setActingMemberId(m.id)} style={[s.info,actingMemberId===m.id&&{borderWidth:2,borderColor:C.brown}]}><Text>{m.name}{isInitiator?" · 发起人":already?" · 已确认":""}</Text></TouchableOpacity>})}</ScrollView><DeathConfirmationScreen person={person} caseData={deathCase} currentMemberId={actingMemberId} onConfirm={id=>setDeathCase(v=>{const n=confirmDeath(v,id);setPub(p=>({...p,deathCases:(p.deathCases||[]).map(x=>x.id===n.id?n:x)}));if(n.status==="confirmed"){const np={...person,dead:true,memorializedAt:new Date().toISOString()};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np)}return n})} onObject={id=>setDeathCase(v=>{const n=objectDeath(v,id);setPub(p=>({...p,deathCases:(p.deathCases||[]).map(x=>x.id===n.id?n:x)}));return n})}/></>;
- else if(screen==="add")body=<UploadScreen onAdd={addMedia} onOldPhoto={()=>setScreen("restore")} onMemory={()=>setScreen("memory")} isMember={false}/>;
+ else if(screen==="add")body=<UploadScreen onAdd={addMedia} onOldPhoto={()=>setScreen("restore")} onMemory={()=>setScreen("memory")} isMember={isMember}/>;
  else if(screen==="chat")body=<FamilyChatMediaScreen family={family} onPatch={patchFamily}/>;
  else if(screen==="memory"||screen==="notes")body=<JournalScreen title="添加一段记忆" hint="写下这件值得记住的事，也可以加入照片或视频。保存后会出现在家庭动态中。" items={family.notes||[]} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
  else if(screen==="private")body=<Private/>;
@@ -129,10 +130,14 @@ export default function IntegratedPhase1App(){
  else if(screen==='timeline')body=<TimelineScreen person={person} family={family}/>;
  else if(screen==='advice')body=<AdviceScreen person={person} onSave={advice=>{const np={...person,advice};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);Alert.alert('已保存');}}/>;
  else if(screen==='memorial')body=<MemorialMemoriesScreen person={person} media={family.media||[]} onSave={memories=>{const np={...person,memories};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}}/>;
- else body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>{screen==="restore"?"老照片扫描修复":"AI回忆影片"}</Text><Text style={s.muted}>该能力保留正式入口，外部服务将在后续阶段对接。</Text></ScrollView>;
+ else if(screen==="restore")body=isMember?<OldPhotoMemberScreen onChoose={()=>setScreen("add")}/>:<MemberGate title="扫描老照片" detail="会员可使用老照片扫描、自动裁切与修复。" />;
+ else if(screen==="film")body=isMember?<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>AI回忆影片</Text><Text style={s.muted}>会员功能 · AI影片生成服务将在后续阶段接入。</Text></ScrollView>:<MemberGate title="AI回忆影片" detail="会员可使用 AI 整理家庭影像并生成回忆影片。" />;
+ else body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>{screen}</Text></ScrollView>;
 
  return <SafeAreaView style={s.app}>{!['welcome','home','my','person','editPerson','addRelative','relation','futureLetter'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{!["welcome","entry","futureLetter"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
 }
+function MemberGate({title,detail}){return <View style={{flex:1,justifyContent:"center",padding:28,backgroundColor:C.bg}}><View style={{alignItems:"center",backgroundColor:"#FFFAF3",borderRadius:26,padding:28,borderWidth:1,borderColor:C.line}}><View style={{width:64,height:64,borderRadius:22,backgroundColor:"#F4E4D4",alignItems:"center",justifyContent:"center",marginBottom:18}}><JiaIcon name="lock" size={29}/></View><Text style={{fontSize:23,fontWeight:"800",color:C.deep}}>{title}</Text><Text style={{fontSize:14,lineHeight:22,color:C.muted,textAlign:"center",marginTop:10}}>{detail}</Text><TouchableOpacity onPress={()=>Alert.alert("会员中心","正式会员购买将在支付系统接入后开放。")} style={{backgroundColor:C.brown,borderRadius:20,paddingVertical:14,paddingHorizontal:32,marginTop:24}}><Text style={{color:"#fff",fontWeight:"700"}}>开通会员</Text></TouchableOpacity></View></View>}
+function OldPhotoMemberScreen({onChoose}){return <ScrollView contentContainerStyle={[s.page,{paddingTop:28}]}><Text style={s.heroT}>扫描老照片</Text><Text style={s.muted}>会员功能 · 将纸质老照片拍下来，自动裁切、矫正后保存原图，再选择是否 AI 修复。</Text><View style={{height:280,borderRadius:26,marginTop:24,backgroundColor:"#E9DED2",alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:C.line}}><JiaIcon name="scan" size={54}/><Text style={[s.muted,{marginTop:14}]}>扫描取景框</Text></View><TouchableOpacity style={[s.action,{justifyContent:"center",marginTop:20,backgroundColor:C.brown}]} onPress={onChoose}><Text style={{color:"#fff",fontWeight:"700"}}>选择 / 拍摄老照片</Text></TouchableOpacity><Text style={[s.muted,{textAlign:"center",marginTop:10}]}>下一步将接入相机边缘识别与透视矫正。</Text></ScrollView>}
 function FamilyCover({family,onPress}){
  const firstPhoto=(family.media||[]).find(m=>m.type!=="video"&&!m.private&&m.uri)?.uri;
  if(firstPhoto)return <TouchableOpacity activeOpacity={.85} onPress={onPress} style={s.cover}><ImageBackground source={{uri:firstPhoto}} style={s.coverPhoto} imageStyle={s.coverPhotoImage}><View style={s.coverShade}/><Text style={s.coverTitle}>家，是我们一生的牵挂。</Text><Text style={s.coverSub}>珍藏每一个相聚的瞬间</Text></ImageBackground></TouchableOpacity>;
