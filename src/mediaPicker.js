@@ -3,7 +3,7 @@ import {Platform} from 'react-native';
 import * as ImagePicker from "expo-image-picker";
 
 export async function pickImagesAndVideos(options={}){
-  const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const permission=Platform.OS==="web"?{granted:true}:await ImagePicker.requestMediaLibraryPermissionsAsync();
   if(!permission.granted)return {permissionDenied:true,assets:[]};
   const mediaTypes=["images","videos"];
   const result=await ImagePicker.launchImageLibraryAsync({
