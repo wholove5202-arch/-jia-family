@@ -9,7 +9,6 @@ import AnnualAvatarRealScreen from "./AnnualAvatarRealScreen";
 import FamilyChatMediaScreen from "./FamilyChatMediaScreen";
 import {FamilyNotesScreen} from "./FamilyInteractionScreens";
 import UploadScreen from "./UploadScreen";
-import {pickImagesAndVideos} from "./mediaPicker";
 import MediaPeopleTagger from "./MediaPeopleTagger";
 import {useSeparatedPersistence} from "./useSeparatedPersistence";
 import {appendAvatarHistory,publicPersonAvatar,assertPrivateIsolation} from "./Phase1StateModel";
@@ -87,7 +86,6 @@ export default function IntegratedPhase1App(){
  const openMedia=m=>{setSelectedMedia(m);setScreen("tagMedia")};
  const saveTagged=m=>{patchFamily({media:family.media.map(x=>x.id===m.id?m:x)});setSelectedMedia(m);setScreen("album")};
  const addMedia=async items=>{await savePublic(state=>({...state,families:state.families.map(f=>f.id===family.id?{...f,media:[...(f.media||[]),...items.map(x=>({...x,albumArchived:true}))]}:f)}));setUploadAssets([]);setScreen("album")};
- const pickAlbumMedia=async()=>{const result=await pickImagesAndVideos();if(result.permissionDenied)throw new Error("请允许访问照片后再选择。");if(!result.assets.length)return;setUploadAssets(result.assets);setScreen("add")};
  const deleteMedia=ids=>savePublic(p=>({...p,families:p.families.map(f=>f.id===family.id?{...f,media:(f.media||[]).filter(x=>!(Array.isArray(ids)?ids:[ids]).includes(x.id))}:f)}));
  const updateAlbumMedia=item=>savePublic(p=>({...p,families:p.families.map(f=>f.id===family.id?{...f,media:(f.media||[]).map(x=>x.id===item.id?{...x,takenAt:item.takenAt,event:item.event}:x)}:f)}));
  const saveAvatar=entry=>{setPub(p=>appendAvatarHistory(p,entry));Alert.alert("已更换","年度头像已保存到历史记录。");setScreen("person")};
@@ -130,7 +128,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="tree")body=<FamilyTreeScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} focusId={treeFocusId} onPerson={openPerson} onAdd={openAdd} onBack={back} onSwitchFamily={()=>setScreen("families")}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={{...person,avatarUri:personAvatar(person)}} onSave={savePerson} onBack={back}/>;
  else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={saveRelative}/>;
- else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={pickAlbumMedia} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
+ else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>{setUploadAssets([]);setScreen("add")}} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
  else if(screen==="person")body=<Person/>;
