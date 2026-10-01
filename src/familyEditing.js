@@ -16,6 +16,28 @@ export function validateParents(members,id,fatherId,motherId){
   while(stack.length){const pid=stack.pop();if(pid===id)throw new Error('这个关系会形成循环，请重新选择');if(seen.has(pid))continue;seen.add(pid);const p=members.find(x=>x.id===pid);if(p)stack.push(...[p.fatherId,p.motherId].filter(Boolean));}
  }
 }
+// Complete only unambiguous current couples; explicit and historical parentage stays intact.
+export function completeCoupleParents(members){
+ const next=members.map(p=>({...p}));
+ const byId=new Map(next.map(p=>[p.id,p]));
+ for(const child of next){
+  if(child.parentageManual||Boolean(child.fatherId)===Boolean(child.motherId))continue;
+  const parent=byId.get(child.fatherId||child.motherId);
+  if(!parent)continue;
+  const ids=[...new Set(parent.spouseIds||[])];
+  if(ids.length!==1)continue;
+  const spouse=byId.get(ids[0]);
+  if(!spouse||spouse.id===parent.id)continue;
+  const reciprocal=[...new Set(spouse.spouseIds||[])];
+  if(reciprocal.length!==1||reciprocal[0]!==parent.id)continue;
+  if([parent,spouse].some(p=>(p.marriages||[]).some(m=>m.status!=='married'||m.personId!==(p.id===parent.id?spouse.id:parent.id))))continue;
+  const fatherId=child.fatherId||spouse.id,motherId=child.motherId||spouse.id;
+  try{validateParents(next,child.id,fatherId,motherId);}catch{continue;}
+  child.fatherId=fatherId;child.motherId=motherId;
+ }
+ return next;
+}
+
 export function addRelative(members,anchorId,relation,record,{half=false,parentSide='father',priorStatus='divorced'}={}){
  const anchor=members.find(p=>p.id===anchorId);
  if(!anchor)throw new Error('请先选择要添加关系的家人');
@@ -34,17 +56,15 @@ export function addRelative(members,anchorId,relation,record,{half=false,parentS
   a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==b.id),{personId:b.id,status:'married'}];b.marriages=[...(b.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:'married'}];
   a.spouseIds=[...new Set([...(a.spouseIds||[]),b.id])];b.spouseIds=[...new Set([...(b.spouseIds||[]),a.id])];
  }else if(relation==='son'||relation==='daughter'){
-  const key=parentSide==='mother'?'motherId':'fatherId',otherKey=key==='fatherId'?'motherId':'fatherId';
+  const key=parentSide==='mother'?'motherId':'fatherId';
   assign(b,key,a.id);
-  // 普通家庭中，添加子女时自动把当前配偶补为另一位父母；特殊家庭仍可在“编辑关系”里手动调整。
-  const spouse=(a.spouseIds||[]).map(id=>next.find(p=>p.id===id)).find(Boolean);
-  if(spouse&&!b[otherKey])b[otherKey]=spouse.id;
  }
  else if(['sibling','brother','sister'].includes(relation)){
   const kind=half?parentSide:'full';a.siblingLinks=[...(a.siblingLinks||[]).filter(l=>l.personId!==b.id),{personId:b.id,kind}];b.siblingLinks=[...(b.siblingLinks||[]).filter(l=>l.personId!==a.id),{personId:a.id,kind}];
   if(half){const key=parentSide==='mother'?'motherId':'fatherId';if(!a[key])throw new Error('请先补充共同父亲或母亲');assign(b,key,a[key]);}
   else {if(a.fatherId)assign(b,'fatherId',a.fatherId);if(a.motherId)assign(b,'motherId',a.motherId);}
  }else throw new Error('请选择家庭关系');
+ if(relation==='spouse'||relation==='son'||relation==='daughter')next=completeCoupleParents(next);
  for(const p of next)validateParents(next,p.id,p.fatherId,p.motherId);
  return next;
 }
