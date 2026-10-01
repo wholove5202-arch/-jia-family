@@ -2,7 +2,7 @@
   "expo": {
     "name": "家",
     "slug": "jia-family",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "orientation": "portrait",
     "ios": {
       "bundleIdentifier": "com.jia.familymemory",
@@ -25,7 +25,8 @@
       }
     },
     "web": {
-      "output": "single"
+      "output": "single",
+      "name": "家 · 测试版 2.2.1"
     },
     "experiments": {
       "baseUrl": "/-jia-family"
