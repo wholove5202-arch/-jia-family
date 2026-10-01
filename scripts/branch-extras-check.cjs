@@ -12,10 +12,12 @@ async function main(){
  const h=hooks(),react={...h,createElement};native.Switch='Switch';
  const editing=moduleAt('src/familyEditing.js',react);
  const model=moduleAt('src/familyKinship.js',react,{'./familyEditing':editing});
- const members=[{id:'dad',name:'爸爸',gender:'男'},{id:'mom',name:'妈妈',gender:'女'},{id:'me',name:'我',gender:'男',fatherId:'dad',motherId:'mom',spouseIds:['wife']},{id:'wife',name:'刘璐',gender:'女',spouseIds:['me']},{id:'sis',name:'姐姐',gender:'女',fatherId:'dad',motherId:'mom'},{id:'son',name:'刘子淮',gender:'男',fatherId:'me',motherId:'wife'},{id:'daughter',name:'刘子优',gender:'女',fatherId:'me',motherId:'wife'},{id:'niece',name:'张亲然',gender:'女',motherId:'sis'},{id:'unknown',name:'未知'}];
- for(const [a,b,want] of [['son','sis','姑姑'],['son','wife','妈妈'],['sis','son','侄子'],['me','niece','外甥女'],['dad','son','孙子'],['wife','son','儿子'],['me','me','自己']])assert.equal(model.kinshipLabel(members,a,b),want);
+ const members=[{id:'grandpa',name:'爷爷'},{id:'grandma',name:'奶奶'},{id:'dad',name:'爸爸',gender:'男',fatherId:'grandpa',motherId:'grandma'},{id:'mom',name:'妈妈',gender:'女'},{id:'me',name:'我',gender:'男',fatherId:'dad',motherId:'mom',spouseIds:['wife']},{id:'wife',name:'刘璐',gender:'女',spouseIds:['me']},{id:'sis',name:'姐姐',gender:'女',fatherId:'dad',motherId:'mom'},{id:'son',name:'刘子淮',gender:'男',fatherId:'me',motherId:'wife'},{id:'daughter',name:'刘子优',gender:'女',fatherId:'me',motherId:'wife'},{id:'niece',name:'张亲然',gender:'女',motherId:'sis'},{id:'unknown',name:'未知'}];
+ for(const [a,b,want] of [['son','grandpa','曾祖父（太爷爷）'],['son','grandma','曾祖母（太奶奶）'],['grandpa','son','曾孙'],['grandma','daughter','曾孙女'],['me','grandpa','爷爷'],['son','sis','姑姑'],['son','wife','妈妈'],['sis','son','侄子'],['me','niece','外甥女'],['dad','son','孙子'],['wife','son','儿子'],['me','me','自己']])assert.equal(model.kinshipLabel(members,a,b),want);
  assert(model.kinshipLabel(members,'me','sis').includes('长幼待确认'));
  assert(model.kinshipLabel(members,'me','unknown').includes('无法确定'));
+ assert(model.kinshipLabel(members.filter(p=>p.id!=='dad'),'son','grandpa').includes('无法确定'));
+ assert(model.kinshipLabel([{id:'a',fatherId:'b'},{id:'b',fatherId:'a'},{id:'c'}],'a','c').includes('无法确定'));
  const family={id:'f1',name:'幸福家庭',members,notes:[{text:'秘密'}],media:[{uri:'SECRET'}]};
  assert.equal(model.branchSharingEnabled(family),true);
  const link={sourceFamilyId:'f1',targetFamilyId:'f2',status:'confirmed',sourceConfirmed:true,targetConfirmed:true,basicRelationshipsAllowed:true};
@@ -35,6 +37,9 @@ async function main(){
  nodes.find(n=>n.props.accessibilityLabel==='选择称呼发起人').props.onPress();nodes=extras();nodes.find(n=>n.props.accessibilityLabel==='选择刘子淮').props.onPress();nodes=extras();
  nodes.find(n=>n.props.accessibilityLabel==='选择要称呼的家人').props.onPress();nodes=extras();nodes.find(n=>n.props.accessibilityLabel==='选择姐姐').props.onPress();nodes=extras();assert(text(nodes).includes('姑姑'));
  nodes.find(n=>n.props.accessibilityLabel==='交换两位家人').props.onPress();nodes=extras();assert(text(nodes).includes('侄子'));
+ nodes.find(n=>n.props.accessibilityLabel==='选择称呼发起人').props.onPress();nodes=extras();nodes.find(n=>n.props.accessibilityLabel==='选择刘子淮').props.onPress();nodes=extras();
+ nodes.find(n=>n.props.accessibilityLabel==='选择要称呼的家人').props.onPress();nodes=extras();nodes.find(n=>n.props.accessibilityLabel==='选择爷爷').props.onPress();nodes=extras();assert(text(nodes).includes('曾祖父（太爷爷）'));
+ nodes.find(n=>n.props.accessibilityLabel==='交换两位家人').props.onPress();nodes=extras();assert(text(nodes).includes('曾孙'));
  nodes.find(n=>n.props.accessibilityLabel==='设置家庭分支可见范围').props.onPress();assert.equal(settingsCount,1);
  console.log('PASS kinship selectors and swap, uncertain relationship fallback, default-on preferences, denied unconfirmed/disabled grants, durable save failure/retry and private-content exclusion');
 }
