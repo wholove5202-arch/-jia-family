@@ -110,7 +110,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="chat")body=<FamilyChatMediaScreen family={family} onPatch={patchFamily}/>;
  else if(screen==="notes")body=<JournalScreen title="家庭动态 / 记事" hint="用文字、图片和视频留下家庭的共同记忆。" items={family.notes||[]} onSave={n=>patchFamily({notes:[n,...(family.notes||[]).filter(x=>x.id!==n.id)]})}/>;
  else if(screen==="private")body=<Private/>;
- else if(screen==="futureLetter")body=<FutureLetterScreen items={priv.futureLetters||[]} members={family?.members||[]} onSave={x=>setPriv(p=>({...p,futureLetters:[x,...(p.futureLetters||[])]}))} onDelete={id=>setPriv(p=>({...p,futureLetters:(p.futureLetters||[]).filter(x=>x.id!==id)}))}/>;
+ else if(screen==="futureLetter")body=<FutureLetterScreen onBack={back} items={priv.futureLetters||[]} members={family?.members||[]} onSave={x=>setPriv(p=>({...p,futureLetters:[x,...(p.futureLetters||[])]}))} onDelete={id=>setPriv(p=>({...p,futureLetters:(p.futureLetters||[]).filter(x=>x.id!==id)}))}/>;
  else if(screen==="privateMedia")body=<PrivateMediaScreen items={priv.privateMedia||[]} onAdd={items=>setPriv(p=>({...p,aiAllowed:false,privateMedia:[...items,...(p.privateMedia||[])]}))}/>;
  else if(screen==="privateNotes")body=<JournalScreen title="个人记事本" hint="仅自己可见 · 可打开查看和编辑 · 不进入 AI" items={priv.privateNotes||[]} onSave={n=>setPriv(p=>({...p,privateNotes:[{...n,aiAllowed:false},...(p.privateNotes||[]).filter(x=>x.id!==n.id)]}))}/>;
  else if(screen==="miss")body=<MissYouScreen deceased={deceased} entries={priv.missYou} onAdd={x=>setPriv(p=>({...p,missYou:[x,...p.missYou]}))}/>;
@@ -126,7 +126,7 @@ export default function IntegratedPhase1App(){
  else if(screen==='memorial')body=<MemorialMemoriesScreen person={person} media={family.media||[]} onSave={memories=>{const np={...person,memories};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}}/>;
  else body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>{screen==="restore"?"老照片扫描修复":"AI回忆影片"}</Text><Text style={s.muted}>该能力保留正式入口，外部服务将在后续阶段对接。</Text></ScrollView>;
 
- return <SafeAreaView style={s.app}>{!['welcome','home','my','person','editPerson','addRelative','relation'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{!["welcome","entry"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
+ return <SafeAreaView style={s.app}>{!['welcome','home','my','person','editPerson','addRelative','relation','futureLetter'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{!["welcome","entry","futureLetter"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
 }
 function FamilyCover({family,onPress}){
  const firstPhoto=(family.media||[]).find(m=>m.type!=="video"&&!m.private&&m.uri)?.uri;
