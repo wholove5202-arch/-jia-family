@@ -21,6 +21,13 @@ async function main(){
  await button(nodes,'保存中').props.onPress();assert.equal(calls,1);resolveSave();await operation;
  console.log('PASS name-only son flow, automatic parents, awaited save and duplicate tap protection');
  h.slots.length=0;props.anchor=members[1];props.onSave=async(...args)=>{saved=args;throw Error('写入失败')};nodes=render();button(nodes,'女儿').props.onPress();nodes=render();nodes.find(n=>n.type==='TextInput').props.onChangeText('女儿测试');nodes=render();await button(nodes,'保存').props.onPress();nodes=render();assert.equal(saved[2].parentSide,'mother');assert.equal(saved[0].gender,'女');assert(text(nodes).includes('写入失败'));assert.equal(nodes.find(n=>n.type==='TextInput').props.value,'女儿测试');
+ const optionState=hooks(),optionReact={...optionState,createElement};
+ const optionUi=moduleAt('src/FamilyPeopleScreens.js',optionReact,{'./familyEditing':domain,'./JiaIcon':()=>null});
+ const complete={...members[0],fatherId:'dad',motherId:'mom'};
+ optionState.reset();const optionNodes=flatten(optionUi.AddRelativeScreen({...props,anchor:complete,members:[complete,members[1],{id:'dad',name:'爸爸'},{id:'mom',name:'妈妈'}]}));
+ assert(!optionNodes.some(n=>n.type==='TouchableOpacity'&&['父亲','母亲','配偶','续配 / 再婚'].includes(text(n))));
+ assert(text(optionNodes).includes('我和刘璐的儿子'));assert(text(optionNodes).includes('父亲：爸爸'));assert(text(optionNodes).includes('母亲：妈妈'));
+ console.log('PASS occupied relation choices hidden and initial selection remains valid');
  console.log('PASS maternal anchor, daughter gender and save failure preserves draft');
  const hp=hooks(),rp={...hp,createElement};const profile=moduleAt('src/FamilyPeopleScreens.js',rp,{'./familyEditing':domain,'./JiaIcon':()=>null});
  let deletes=0;const person={id:'child',name:'测试孩子',claimed:false};const profileProps={person,members:[...members,person],family:{members:[...members,person]},onDelete:async()=>{deletes++;throw Error('删除写入失败')}};
