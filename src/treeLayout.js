@@ -11,7 +11,13 @@ export function layoutFamily(members,all=false){
  const bottom=Math.max(0,...levels.values());
  const shown=members.filter(p=>all||levels.get(root(p.id))>=bottom-2),rows=[];
  for(let i=all?0:Math.max(0,bottom-2);i<=bottom;i++){const row=[];for(const [k,ps] of groups)if(levels.get(k)===i)row.push(...ps.filter(p=>shown.includes(p)));if(row.length)rows.push(row);}
- const width=Math.max(320,...rows.map(r=>r.length*104+32)),height=Math.max(220,rows.length*158+36),positions={};
- rows.forEach((row,i)=>row.forEach((p,j)=>positions[p.id]={x:(width-row.length*104)/2+j*104+52,y:i*158+36}));
+ // Keep a parent between two partners, so each child's couple connector
+ // does not run through the other partner's avatar.
+ const partners=new Map(members.map(p=>[p.id,new Set()]));
+ const pair=(a,b)=>{if(ids.has(a)&&ids.has(b)){partners.get(a).add(b);partners.get(b).add(a)}};
+ for(const p of members){for(const id of p.spouseIds||[])pair(p.id,id);if(p.fatherId&&p.motherId)pair(p.fatherId,p.motherId)}
+ for(const row of rows){const pivot=row.find(p=>[...partners.get(p.id)].filter(id=>row.some(q=>q.id===id)).length===2);if(pivot){const mates=row.filter(p=>partners.get(pivot.id).has(p.id));const start=Math.min(...[pivot,...mates].map(p=>row.indexOf(p)));const rest=row.filter(p=>p!==pivot&&!mates.includes(p));rest.splice(Math.min(start,rest.length),0,mates[0],pivot,mates[1]);row.splice(0,row.length,...rest)}}
+ const width=Math.max(320,...rows.map(r=>r.length*112+32)),height=Math.max(220,(rows.length-1)*166+152),positions={};
+ rows.forEach((row,i)=>row.forEach((p,j)=>positions[p.id]={x:(width-row.length*112)/2+j*112+56,y:i*166+20}));
  return {rows,width,height,positions,totalGenerations:bottom+1};
 }

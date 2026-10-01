@@ -9,6 +9,7 @@ export default function JiaIcon({name,size=24,color='#965331'}){
  const circle=(x,y,d,filled=false)=>filled?line(x,y,d,d,{borderRadius:d*scale/2}):box(x,y,d,d,d/2);
  let shapes;
  switch(name){
+ case 'search':shapes=[circle(2,2,14),line(14,17,9,1.8,{transform:[{rotate:'45deg'}]})];break;
  case 'calendar':shapes=[box(2,4,20,18),line(2,9,20,1.6),line(7,1,1.6,6),line(16,1,1.6,6),circle(6,13,3,true),circle(12,13,3,true),circle(6,18,3,true)];break;
  case 'tree':shapes=[box(9,1,6,6,2),line(11.2,7,1.6,5),line(4,11,16,1.6),line(4,11,1.6,5),line(18.4,11,1.6,5),box(1,16,8,7,2),box(15,16,8,7,2)];break;
  case 'album':shapes=[box(2,3,20,18),circle(6,7,4),line(5,15,8,1.8,{transform:[{rotate:'-40deg'}]}),line(11,14,8,1.8,{transform:[{rotate:'40deg'}]})];break;
