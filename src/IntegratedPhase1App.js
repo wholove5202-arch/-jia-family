@@ -40,7 +40,7 @@ const defaultPub={schemaVersion:4,activeFamilyId:"f1",membership:{active:false,p
 const defaultPriv={schemaVersion:1,aiAllowed:false,privateNotes:[],missYou:[],legacyGrants:[],privateMedia:[],futureLetters:[]};
 
 export default function IntegratedPhase1App(){
- const {pub,setPub,priv,setPriv,saveFutureItem,updateFutureItem,ready,error}=useSeparatedPersistence(defaultPub,defaultPriv);
+ const {pub,setPub,savePublic,priv,setPriv,saveFutureItem,updateFutureItem,ready,error}=useSeparatedPersistence(defaultPub,defaultPriv);
  const [treeFocusId,setTreeFocusId]=useState("me"),[relativeAnchor,setRelativeAnchor]=useState(null);
  const [screen,rawSetScreen]=useState("welcome"),[person,setPerson]=useState(null),[selectedMedia,setSelectedMedia]=useState(null),[deathCase,setDeathCase]=useState(null),[actingMemberId,setActingMemberId]=useState("me");
  const history=useRef([]),current=useRef('welcome'),[unlocked,setUnlocked]=useState(false),pending=useRef('private');
@@ -66,7 +66,8 @@ export default function IntegratedPhase1App(){
  const openMedia=m=>{setSelectedMedia(m);setScreen("tagMedia")};
  const saveTagged=m=>{patchFamily({media:family.media.map(x=>x.id===m.id?m:x)});setSelectedMedia(m);setScreen("album")};
  const addMedia=items=>{patchFamily({media:[...(family.media||[]),...items.map(x=>({...x,albumArchived:true}))]});setScreen("album")};
- const deleteMedia=id=>{patchFamily({media:(family.media||[]).filter(x=>x.id!==id)});};
+ const deleteMedia=ids=>savePublic(p=>({...p,families:p.families.map(f=>f.id===family.id?{...f,media:(f.media||[]).filter(x=>!(Array.isArray(ids)?ids:[ids]).includes(x.id))}:f)}));
+ const updateAlbumMedia=item=>savePublic(p=>({...p,families:p.families.map(f=>f.id===family.id?{...f,media:(f.media||[]).map(x=>x.id===item.id?{...x,takenAt:item.takenAt,event:item.event}:x)}:f)}));
  const saveAvatar=entry=>{setPub(p=>appendAvatarHistory(p,entry));Alert.alert("已更换","年度头像已保存到历史记录。");setScreen("person")};
  const avatarFor=p=>publicPersonAvatar(pub,p.id);
 
@@ -106,7 +107,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="tree")body=<FamilyTreeScreen family={family} focusId={treeFocusId} onPerson={openPerson} onAdd={openAdd}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={person} onSave={savePerson} onBack={back}/>;
  else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={(members,id)=>{updateMembers(members);finishPerson(members.find(p=>p.id===id))}}/>;
- else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")} onBack={()=>setScreen("home")} onDelete={deleteMedia}/>;
+ else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
  else if(screen==="person")body=<Person/>;
