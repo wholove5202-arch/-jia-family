@@ -17,6 +17,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run check:syntax
       - run: node scripts/parents-check.cjs
+      - run: node scripts/relative-flow-check.cjs
       - run: npx expo install --check
       - run: npx expo export --platform ios --platform android --output-dir dist-native
         env:
