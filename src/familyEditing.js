@@ -38,6 +38,14 @@ export function completeCoupleParents(members){
  return next;
 }
 
+export function defaultParentSide(members,person){
+ if(person?.gender==='女')return 'mother';
+ if(person?.gender==='男')return 'father';
+ const maternal=members.some(p=>p.motherId===person?.id),paternal=members.some(p=>p.fatherId===person?.id);
+ if(maternal&&!paternal)return 'mother';
+ if(['母亲','妈妈','女儿','姐姐','妹妹','姐妹','妻子'].includes(person?.relation))return 'mother';
+ return 'father';
+}
 export function addRelative(members,anchorId,relation,record,{half=false,parentSide='father',priorStatus='divorced'}={}){
  const anchor=members.find(p=>p.id===anchorId);
  if(!anchor)throw new Error('请先选择要添加关系的家人');
