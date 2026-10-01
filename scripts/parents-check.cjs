@@ -2,7 +2,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const dataModule=code=>'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
 async function main(){
  const editingUrl=dataModule(fs.readFileSync(process.argv[2]||'src/familyEditing.js','utf8'));
- const {addRelative,completeCoupleParents}=await import(editingUrl);
+ const {addRelative,completeCoupleParents,availableRelativeOptions,endMarriage}=await import(editingUrl);
  const migrationCode=fs.readFileSync(process.argv[3]||'src/familyDataMigration.js','utf8').replace("'./familyEditing'",JSON.stringify(editingUrl)).replace("'./familyEditing.mjs'",JSON.stringify(editingUrl));
  const {migrateSeedAncestor}=await import(dataModule(migrationCode));
  const couple=()=>[{id:'me',name:'我',spouseIds:['wife']},{id:'wife',name:'刘璐',spouseIds:['me']}];
@@ -18,12 +18,16 @@ async function main(){
  check('ambiguous spouses preserved',()=>{const list=couple();list[0].spouseIds.push('other');assert.equal(get(completeCoupleParents([...list,{id:'other',spouseIds:['me']},son])).motherId,undefined)});
  check('nonreciprocal spouse preserved',()=>{const list=couple();list[1].spouseIds=[];assert.equal(get(completeCoupleParents([...list,son])).motherId,undefined)});
  check('past marriage preserved',()=>{const list=couple();list[0].marriages=[{personId:'ex',status:'divorced'}];assert.equal(get(completeCoupleParents([...list,son])).motherId,undefined)});
- check('remarriage does not assign old children',()=>{const list=couple();const result=addRelative([...list,son],'me','remarry',{id:'new',name:'新配偶'});assert.equal(get(result).motherId,undefined)});
+ check('remarriage does not assign old children',()=>{const list=couple();assert.throws(()=>addRelative([...list,son],'me','remarry',{id:'new',name:'新配偶'}));const result=addRelative(endMarriage([...list,son],'me','wife'),'me','remarry',{id:'new',name:'新配偶'});assert.equal(get(result).motherId,undefined)});
  check('missing spouse preserved',()=>assert.equal(get(completeCoupleParents([{id:'me',spouseIds:['missing']},son])).motherId,undefined));
  check('cyclic inference rejected',()=>{const list=couple();list[1].fatherId='son';assert.equal(get(completeCoupleParents([...list,son])).motherId,undefined)});
  check('unparented child preserved',()=>assert.equal(get(completeCoupleParents([...couple(),{id:'son'}])).fatherId,undefined));
  check('repeat completion is stable',()=>{const once=completeCoupleParents([...couple(),son]);assert.deepEqual(completeCoupleParents(once),once)});
  check('demo ancestor repair still works',()=>{const input={families:[{id:'f1',members:[{id:'me',fatherId:'p1'},{id:'p1'},{id:'p5',isDemo:true}]}]};assert.equal(get(migrateSeedAncestor(input).families[0].members,'p1').fatherId,'p5')});
+ check('existing parents and spouse hidden',()=>{const options=availableRelativeOptions({fatherId:'dad',motherId:'mom',spouseIds:['wife']}).map(o=>o[0]);assert.deepEqual(options,['son','daughter','brother','sister'])});
+ check('missing mother remains available',()=>{const options=availableRelativeOptions({fatherId:'dad'}).map(o=>o[0]);assert(!options.includes('father'));assert(options.includes('mother'));assert(options.includes('spouse'))});
+ check('married history also prevents duplicate spouse',()=>assert(!availableRelativeOptions({marriages:[{personId:'wife',status:'married'}]}).some(o=>o[0]==='spouse')));
+ check('divorce opens spouse and preserves old parentage',()=>{const family=[...couple(),{...son,motherId:'wife'}];const divorced=endMarriage(family,'me','wife');assert(availableRelativeOptions(get(divorced,'me')).some(o=>o[0]==='spouse'));const next=addRelative(divorced,'me','spouse',{id:'new',name:'新配偶'});assert.equal(get(next).motherId,'wife');assert(get(next,'me').marriages.some(m=>m.personId==='wife'&&m.status==='divorced'))});
  console.log(count+' relationship regression checks passed');
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
