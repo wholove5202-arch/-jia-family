@@ -1,9 +1,10 @@
+import {theme} from './theme';
 
 import React,{useState} from "react";
 import {View,Text,TextInput,TouchableOpacity,ScrollView,StyleSheet,Alert} from "react-native";
 import JiaIcon from "./JiaIcon";
 
-const C={bg:"#F8F2FB",card:"#FFFBFF",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#E7DDE9"};
+const C=theme;
 const Card=({children})=><View style={s.card}>{children}</View>;
 const Btn=({title,onPress,secondary})=><TouchableOpacity onPress={onPress} style={[s.btn,secondary&&s.secondary]}><Text style={[s.btnT,secondary&&{color:C.deep}]}>{title}</Text></TouchableOpacity>;
 

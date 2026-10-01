@@ -1,10 +1,11 @@
+import {theme} from './theme';
 
 import React,{useState} from "react";
 import {View,Text,TextInput,TouchableOpacity,ScrollView,StyleSheet,Alert} from "react-native";
 import {pickImagesAndVideos} from "./mediaPicker";
 import {makeChatMediaMessage,decideChatArchive} from "./ChatMediaArchive";
 import {ChatArchiveCard} from "./Phase1CoreScreens";
-const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
+const C=theme;
 export default function FamilyChatMediaScreen({family,onPatch}){
  const [text,setText]=useState("");
  const sendText=()=>{if(!text.trim())return;onPatch({chat:[...(family.chat||[]),{id:`msg_${Date.now()}`,type:"text",senderId:"me",senderName:"我",text:text.trim(),createdAt:new Date().toISOString()}]});setText("")};

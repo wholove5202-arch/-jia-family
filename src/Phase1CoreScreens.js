@@ -1,10 +1,11 @@
+import {theme} from './theme';
 
 import React,{useMemo,useState} from "react";
 import {View,Text,TextInput,TouchableOpacity,ScrollView,Image,StyleSheet} from "react-native";
 import {indexMedia} from "./albumDomain";
 import {siblingsOf} from "./relationshipRules";
 
-const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
+const C=theme;
 const Card=({children,onPress})=><TouchableOpacity activeOpacity={onPress?.75:1} onPress={onPress} style={s.card}>{children}</TouchableOpacity>;
 const Btn=({title,onPress})=><TouchableOpacity onPress={onPress} style={s.btn}><Text style={s.btnT}>{title}</Text></TouchableOpacity>;
 

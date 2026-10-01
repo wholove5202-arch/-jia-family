@@ -2,7 +2,7 @@ import React,{useState} from "react";
 import {View,Text,TouchableOpacity,StyleSheet,Alert,Image} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import JiaIcon from "./JiaIcon";
-const C={bg:"#171411",brown:"#965331",cream:"#FFF8EF",muted:"#CBBEB3"};
+const C={bg:"#171411",brown:"#378BCC",cream:"#FFFFFF",muted:"#CBBEB3"};
 export default function OldPhotoScanner({onBack,onSave}){
  const [shot,setShot]=useState(null),[busy,setBusy]=useState(false);
  async function take(){if(busy)return;try{setBusy(true);const perm=await ImagePicker.requestCameraPermissionsAsync();if(!perm.granted){Alert.alert("需要相机权限","扫描纸质老照片需要允许使用相机。");return}const r=await ImagePicker.launchCameraAsync({mediaTypes:["images"],quality:.92,allowsEditing:false});if(!r.canceled&&r.assets?.[0])setShot(r.assets[0]);}catch(e){Alert.alert("无法打开相机","请检查相机权限后重试。");}finally{setBusy(false)}}

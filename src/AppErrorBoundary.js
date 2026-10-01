@@ -12,4 +12,4 @@ export default class AppErrorBoundary extends React.Component{
    <Text selectable style={s.err}>{String(this.state.error?.message||this.state.error)}</Text></View></SafeAreaView>
  }
 }
-const s=StyleSheet.create({page:{flex:1,backgroundColor:"#FBF4E9",justifyContent:"center",padding:22},card:{backgroundColor:"#FFFAF2",padding:20,borderRadius:20},title:{fontSize:21,fontWeight:"800",color:"#5D321F"},body:{marginTop:10,lineHeight:21,color:"#8F7B6E"},err:{marginTop:14,fontSize:12,color:"#5D321F"}});
+const s=StyleSheet.create({page:{flex:1,backgroundColor:"#FFFFFF",justifyContent:"center",padding:22},card:{backgroundColor:"#FFFFFF",padding:20,borderRadius:20},title:{fontSize:21,fontWeight:"800",color:"#292E30"},body:{marginTop:10,lineHeight:21,color:"#929B97"},err:{marginTop:14,fontSize:12,color:"#292E30"}});

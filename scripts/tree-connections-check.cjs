@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),babel=require('@babel/core');
 const root=process.cwd();
-function moduleAt(path,mocks={}){const out={};const code=babel.transformSync(fs.readFileSync(path,'utf8'),{babelrc:false,configFile:false,plugins:[require('@babel/plugin-transform-react-jsx'),require('@babel/plugin-transform-modules-commonjs')]}).code;vm.runInNewContext(code,{exports:out,require:n=>mocks[n]||{},console});return out;}
+function moduleAt(path,mocks={}){const out={};const code=babel.transformSync(fs.readFileSync(path,'utf8'),{babelrc:false,configFile:false,plugins:[require('@babel/plugin-transform-react-jsx'),require('@babel/plugin-transform-modules-commonjs')]}).code;vm.runInNewContext(code,{exports:out,require:n=>n==='./theme'?{theme:{bg:'#fff'}}:mocks[n]||{},console});return out;}
 const layoutModule=moduleAt(root+'/src/treeLayout.js');
 const react={createElement:(type,props,...children)=>({type,props:props||{},children}),useState:x=>[x,()=>{}],useRef:x=>({current:x})};
 const native={View:'View',Text:'Text',TouchableOpacity:'TouchableOpacity',Image:'Image',ScrollView:'ScrollView',StyleSheet:{create:x=>x},PanResponder:{create:()=>({panHandlers:{}})},Platform:{OS:'web'}};

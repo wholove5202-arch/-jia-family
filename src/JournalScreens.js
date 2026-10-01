@@ -1,9 +1,10 @@
+import {theme} from './theme';
 import React,{useState,useEffect} from 'react';
 import {View,Text,TextInput,TouchableOpacity,Image,ScrollView,StyleSheet,Alert,Switch,KeyboardAvoidingView,Platform,Keyboard,TouchableWithoutFeedback} from 'react-native';
 import {useVideoPlayer,VideoView} from 'expo-video';
 import OpeningSettings,{validOpening} from './OpeningSettings';
 import {pickImagesAndVideos} from './mediaPicker';
-export const theme={bg:'#FBF4E9',card:'#FFFAF2',brown:'#965331',deep:'#5D321F',muted:'#8F7B6E',line:'#EADBC8'};
+export {theme} from './theme';
 export const styles=StyleSheet.create({page:{padding:20,paddingBottom:110},title:{fontSize:26,fontWeight:'800',color:theme.deep,marginBottom:8},hint:{fontSize:13,lineHeight:21,color:theme.muted,marginVertical:8},card:{backgroundColor:theme.card,borderWidth:1,borderColor:theme.line,borderRadius:22,padding:18,marginVertical:9},h:{fontSize:17,fontWeight:'700',color:theme.deep},body:{fontSize:15,lineHeight:24,color:theme.deep,marginVertical:8},input:{backgroundColor:'#fff',borderWidth:1,borderColor:theme.line,borderRadius:14,padding:14,color:theme.deep,fontSize:16,marginVertical:8},button:{backgroundColor:theme.brown,padding:15,borderRadius:17,alignItems:'center',marginTop:10},buttonText:{color:'#fff',fontSize:14,fontWeight:'700'},row:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12}});
 export function Btn({title,onPress,light=false,disabled=false}){return <TouchableOpacity disabled={disabled} onPress={onPress} style={[styles.button,light&&{backgroundColor:'#EEE2D3'},disabled&&{opacity:.5}]}><Text style={[styles.buttonText,light&&{color:theme.deep}]}>{title}</Text></TouchableOpacity>}
 function Video({uri}){const player=useVideoPlayer(uri);return <VideoView player={player} style={{width:'100%',height:190,borderRadius:14}} nativeControls/>;}

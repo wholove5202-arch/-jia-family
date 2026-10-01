@@ -1,8 +1,9 @@
+import {theme} from './theme';
 
 import React,{useState} from "react";
 import {View,Text,TextInput,TouchableOpacity,ScrollView,Alert,StyleSheet} from "react-native";
 
-const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8",danger:"#8B3A32"};
+const C=theme;
 const Btn=({title,onPress,secondary,danger})=><TouchableOpacity onPress={onPress} style={[s.btn,secondary&&s.secondary,danger&&s.danger]}><Text style={[s.btnText,secondary&&{color:C.deep}]}>{title}</Text></TouchableOpacity>;
 const Card=({children})=><View style={s.card}>{children}</View>;
 

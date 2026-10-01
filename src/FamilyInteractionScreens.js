@@ -1,7 +1,8 @@
+import {theme} from './theme';
 
 import React,{useState} from "react";
 import {View,Text,TextInput,TouchableOpacity,ScrollView,StyleSheet} from "react-native";
-const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
+const C=theme;
 export function FamilyChatScreen({family,onSend}){
  const [text,setText]=useState("");
  return <View style={s.full}><Text style={s.title}>{family.name} · 家庭群</Text><Text style={s.sub}>当前家庭的聊天与其他家庭完全分开</Text>

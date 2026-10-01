@@ -1,7 +1,8 @@
+import {theme} from './theme';
 
 import React,{useState} from "react";
 import {ScrollView,View,Text,Image,TouchableOpacity,StyleSheet} from "react-native";
-const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
+const C=theme;
 export default function MediaPeopleTagger({media,members,onSave}){
  const [ids,setIds]=useState(media?.personIds||[]);
  const toggle=id=>setIds(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
