@@ -146,7 +146,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="legacy")body=<LegacyGrantEditor privateItems={[...priv.privateNotes,...priv.missYou,...(priv.lifeStories||[]),...(priv.voices||[])]} members={family.members.filter(x=>x.id!=="me")} onSave={g=>{setPriv(p=>({...p,legacyGrants:[...(p.legacyGrants||[]).filter(x=>x.contentId!==g.contentId),g]}));Alert.alert("已保存","已记录这项授权；身故确认与实际释放服务尚未接入，当前不会自动公开。")}}/>;
  else if(screen==='unlock')body=<PrivateAccessScreen onUnlock={unlock}/>;
  else if(screen==='password')body=<PrivateAccessScreen settings onUnlock={back}/>;
- else if(screen==='days')body=<ImportantDaysScreen family={family} onSave={n=>patchFamily({anniversaries:[...(family.anniversaries||[]),n]})}/>;
+ else if(screen==='days')body=<ImportantDaysScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} onPerson={openPerson} onSave={n=>savePublic(state=>({...state,families:state.families.map(f=>f.id===family.id?{...f,anniversaries:[...(f.anniversaries||[]).filter(x=>x.id!==n.id),n]}:f)}))}/>;
  else if(screen==='life')body=<JournalScreen title="人生轨迹 / 我的故事" hint="仅自己可见，记录你的经历与秘密。需要身后开放或影片用途时，请在私密空间的身后传承中逐项授权。" life items={priv.lifeStories||[]} onSave={n=>setPriv(p=>({...p,lifeStories:[{...n,aiAllowed:false},...(p.lifeStories||[]).filter(x=>x.id!==n.id)]}))}/>;
  else if(screen==='voice')body=<VoiceMemoryScreen items={priv.voices||[]} onSave={v=>setPriv(p=>({...p,voices:[v,...(p.voices||[])]}))}/>;
  else if(screen==='honors')body=<HonorsScreen person={person} onSave={honors=>{const np={...person,honors};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}}/>;
