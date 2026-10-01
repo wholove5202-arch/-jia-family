@@ -1,0 +1,54 @@
+name: Android phone startup test
+
+on:
+  workflow_run:
+    workflows: ['Android installable test app']
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  launch:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download the exact tested APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ github.event.workflow_run.id }}
+          GH_REPO: ${{ github.repository }}
+        run: gh run download "$SOURCE_RUN" --name jia-android-phone-test --dir phone-test
+      - name: Enable Android acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and launch on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disable-animations: true
+          script: |
+            adb install phone-test/jia-family-test.apk
+            adb logcat -c
+            adb shell am start -W -n com.jia.familymemory.test/.MainActivity
+            sleep 15
+            adb shell pidof com.jia.familymemory.test
+            mkdir -p phone-evidence
+            adb logcat -d > phone-evidence/startup.log
+            adb shell uiautomator dump /sdcard/jia-ui.xml
+            adb pull /sdcard/jia-ui.xml phone-evidence/ui.xml
+            adb exec-out screencap -p > phone-evidence/startup.png
+            python -c "import pathlib; s=pathlib.Path('phone-evidence/startup.log').read_text(); assert 'FATAL EXCEPTION' not in s; assert 'Unable to load script' not in s; assert 'JavascriptException' not in s; ui=pathlib.Path('phone-evidence/ui.xml').read_text(); assert 'com.jia.familymemory.test' in ui"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jia-android-startup-evidence
+          path: phone-evidence/*
+          retention-days: 14
