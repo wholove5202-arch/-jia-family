@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {migrateSeedAncestor} from './familyDataMigration';
 import {readPrivate,writePrivate} from './securePrivateStorage';
+import {updateFutureSettings} from './futureItemSettings';
 const PUB="jia_phase1_public_v4", PRIV="jia_phase1_private_v4";
 
 export function useSeparatedPersistence(defaultPublic,defaultPrivate){
@@ -16,6 +17,10 @@ export function useSeparatedPersistence(defaultPublic,defaultPrivate){
   const next={...privRef.current,futureLetters:[item,...(privRef.current.futureLetters||[])],aiAllowed:false},serialized=JSON.stringify(next);
   await writePrivate(PRIV,serialized);lastWritten.current=serialized;setPriv(next);
  });
+ const updateFutureItem=(id,settings)=>enqueue(async()=>{
+  const next={...privRef.current,futureLetters:updateFutureSettings(privRef.current.futureLetters||[],id,settings),aiAllowed:false},serialized=JSON.stringify(next);
+  await writePrivate(PRIV,serialized);lastWritten.current=serialized;setPriv(next);
+ });
  useEffect(()=>{(async()=>{
   try{
    const [a,b]=await Promise.all([AsyncStorage.getItem(PUB),readPrivate(PRIV)]);
@@ -25,6 +30,6 @@ export function useSeparatedPersistence(defaultPublic,defaultPrivate){
  })()},[]);
  useEffect(()=>{if(loaded.current&&!error)AsyncStorage.setItem(PUB,JSON.stringify(pub)).catch(e=>setError(e.message))},[pub]);
  useEffect(()=>{if(loaded.current&&!error){const serialized=JSON.stringify({...priv,aiAllowed:false});if(lastWritten.current!==serialized)enqueue(async()=>{if(lastWritten.current===serialized)return;await writePrivate(PRIV,serialized);lastWritten.current=serialized}).catch(e=>setError(e.message))}},[priv]);
- return {pub,setPub,priv,setPriv,saveFutureItem,ready,error};
+ return {pub,setPub,priv,setPriv,saveFutureItem,updateFutureItem,ready,error};
 }
 
