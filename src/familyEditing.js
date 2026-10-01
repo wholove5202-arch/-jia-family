@@ -46,6 +46,13 @@ export function defaultParentSide(members,person){
  if(['母亲','妈妈','女儿','姐姐','妹妹','姐妹','妻子'].includes(person?.relation))return 'mother';
  return 'father';
 }
+export function currentSpouseIds(person){
+ const ended=new Set((person?.marriages||[]).filter(m=>['divorced','widowed'].includes(m.status)).map(m=>m.personId));
+ return [...new Set([...(person?.spouseIds||[]),...(person?.marriages||[]).filter(m=>m.status==='married').map(m=>m.personId)])].filter(id=>id&&!ended.has(id));
+}
+export function availableRelativeOptions(person){
+ return [...(!person?.fatherId?[['father','父亲']]:[]),...(!person?.motherId?[['mother','母亲']]:[]),...(!currentSpouseIds(person).length?[['spouse','配偶']]:[]),['son','儿子'],['daughter','女儿'],['brother','兄弟'],['sister','姐妹']];
+}
 export function addRelative(members,anchorId,relation,record,{half=false,parentSide='father',priorStatus='divorced'}={}){
  const anchor=members.find(p=>p.id===anchorId);
  if(!anchor)throw new Error('请先选择要添加关系的家人');
@@ -58,8 +65,9 @@ export function addRelative(members,anchorId,relation,record,{half=false,parentS
  if(relation==='father'||relation==='mother'){const key=relation==='father'?'fatherId':'motherId';assign(a,key,b.id);for(const l of a.siblingLinks||[]){if(l.kind==='full'||l.kind===relation){const sibling=next.find(p=>p.id===l.personId);if(sibling)assign(sibling,key,b.id);}}}
  else if(relation==='spouse'||relation==='remarry'){
   if([a.fatherId,a.motherId].includes(b.id)||[b.fatherId,b.motherId].includes(a.id))throw new Error('父母或子女不能添加为配偶');
-  if(relation==='spouse'&&(a.spouseIds||[]).some(id=>id!==b.id))throw new Error('已有配偶，请选择续配 / 再婚');
-  if((b.spouseIds||[]).some(id=>id!==a.id))throw new Error('对方已有配偶，请先确认其婚姻状态');
+  if(currentSpouseIds(a).some(id=>id!==b.id))throw new Error('已有配偶，请先在编辑关系中登记离异，再添加配偶');
+  if(relation==='remarry'&&!(a.marriages||[]).some(m=>m.status==='divorced'))throw new Error('请先登记离异，再添加配偶');
+  if(currentSpouseIds(b).some(id=>id!==a.id))throw new Error('对方已有配偶，请先确认其婚姻状态');
   if(relation==='remarry'){for(const id of a.spouseIds||[]){const old=next.find(p=>p.id===id);if(priorStatus==='widowed'&&!old?.dead)throw new Error('配偶尚未标记已故，请先确认状态');if(old){old.spouseIds=(old.spouseIds||[]).filter(id=>id!==a.id);old.marriages=[...(old.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:priorStatus}];}a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==id),{personId:id,status:priorStatus}];}a.spouseIds=[];}
   a.marriages=[...(a.marriages||[]).filter(m=>m.personId!==b.id),{personId:b.id,status:'married'}];b.marriages=[...(b.marriages||[]).filter(m=>m.personId!==a.id),{personId:a.id,status:'married'}];
   a.spouseIds=[...new Set([...(a.spouseIds||[]),b.id])];b.spouseIds=[...new Set([...(b.spouseIds||[]),a.id])];
