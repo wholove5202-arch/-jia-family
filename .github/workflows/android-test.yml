@@ -1,0 +1,89 @@
+name: Android installable test app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-test.yml'
+      - 'src/**'
+      - 'assets/**'
+      - 'App.js'
+      - 'app.json'
+      - 'package*.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jia-android-test
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Install dependencies and verify behavior
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check:syntax
+          node scripts/parents-check.cjs
+          node scripts/relative-flow-check.cjs
+          node scripts/tree-mode-check.cjs
+          npx expo install --check
+      - name: Configure isolated phone test app
+        run: |
+          node <<'JS'
+          const fs=require('fs');
+          const config=JSON.parse(fs.readFileSync('app.json','utf8'));
+          config.expo.name='家·测试版';
+          config.expo.android.package='com.jia.familymemory.test';
+          config.expo.android.versionCode=1000+Number(process.env.GITHUB_RUN_NUMBER);
+          fs.writeFileSync('app.json',JSON.stringify(config,null,2));
+          JS
+          npx expo prebuild --platform android --no-install
+      - name: Compile self-contained APK
+        working-directory: android
+        run: ./gradlew :app:assembleRelease --no-daemon --max-workers=2
+      - name: Verify signature and bundled app
+        run: |
+          mkdir -p phone-test
+          cp android/app/build/outputs/apk/release/app-release.apk phone-test/jia-family-test.apk
+          SIGN_TOOL=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          "$SIGN_TOOL" verify phone-test/jia-family-test.apk
+          python - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('phone-test/jia-family-test.apk') as apk:
+              assert 'assets/index.android.bundle' in apk.namelist(), 'Missing bundled app'
+          PY
+          cd phone-test
+          sha256sum jia-family-test.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jia-android-phone-test
+          path: phone-test/*
+          retention-days: 14
+          if-no-files-found: error
+      - name: Publish verified test download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view android-test >/dev/null 2>&1; then
+            gh release create android-test --target "$GITHUB_SHA" --prerelease --title '家 · Android 手机测试版' --notes '手机测试包，包含本地保存的测试功能。'
+          fi
+          gh release upload android-test phone-test/jia-family-test.apk phone-test/SHA256SUMS.txt --clobber
+          gh release edit android-test --prerelease --title '家 · Android 手机测试版' --notes "已验证 APK 签名及内置应用内容。版本：$GITHUB_SHA。用于手机测试，资料保存在当前设备。"
