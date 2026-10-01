@@ -25,6 +25,7 @@ import PrivateAccessScreen from './PrivateAccessScreen';
 import VoiceMemoryScreen from './VoiceMemoryScreen';
 import FutureLetterScreen from './FutureLetterScreen';
 import {endMarriage} from './familyEditing';
+import OldPhotoScanner from './OldPhotoScanner';
 const privateScreens=new Set(['private','privateMedia','privateNotes','miss','legacy','life','voice','password','futureLetter']);
 const C={bg:"#FBF4E9",card:"#FFFAF2",brown:"#965331",deep:"#5D321F",muted:"#8F7B6E",line:"#EADBC8"};
 const seedFamily={id:"f1",name:"我们的家",members:[
@@ -130,7 +131,8 @@ export default function IntegratedPhase1App(){
  else if(screen==='timeline')body=<TimelineScreen person={person} family={family}/>;
  else if(screen==='advice')body=<AdviceScreen person={person} onSave={advice=>{const np={...person,advice};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);Alert.alert('已保存');}}/>;
  else if(screen==='memorial')body=<MemorialMemoriesScreen person={person} media={family.media||[]} onSave={memories=>{const np={...person,memories};updateMembers(family.members.map(x=>x.id===person.id?np:x));setPerson(np);}}/>;
- else if(screen==="restore")body=isMember?<OldPhotoMemberScreen onChoose={()=>setScreen("add")}/>:<MemberGate title="扫描老照片" detail="会员可使用老照片扫描、自动裁切与修复。" />;
+ else if(screen==="restore")body=isMember?<OldPhotoMemberScreen onChoose={()=>setScreen("scanner")}/>:<MemberGate title="扫描老照片" detail="会员可使用老照片扫描、自动裁切与修复。" />;
+ else if(screen==="scanner")body=isMember?<OldPhotoScanner onBack={back} onSave={shot=>{addMedia([{id:`old_${Date.now()}`,uri:shot.uri,type:"image",createdAt:new Date().toISOString(),takenAt:new Date().toISOString(),event:"老照片",personIds:[],private:false,source:"old_photo_scan",albumArchived:true}]);Alert.alert("已扫描","老照片原图已保存到家庭相册。");setScreen("album");}}/>:<MemberGate title="扫描老照片" detail="会员可使用老照片扫描、自动裁切与修复。" />;
  else if(screen==="film")body=isMember?<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>AI回忆影片</Text><Text style={s.muted}>会员功能 · AI影片生成服务将在后续阶段接入。</Text></ScrollView>:<MemberGate title="AI回忆影片" detail="会员可使用 AI 整理家庭影像并生成回忆影片。" />;
  else body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>{screen}</Text></ScrollView>;
 
