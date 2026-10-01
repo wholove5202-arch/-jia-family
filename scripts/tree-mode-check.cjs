@@ -11,7 +11,10 @@ async function main(){
  const h=hooks(),react={...h,createElement};let handlers;
  native.PanResponder={create:config=>{handlers=config;return {panHandlers:{onMoveShouldSetResponder:config.onMoveShouldSetPanResponder,onResponderMove:config.onPanResponderMove}}}};
  const layout=moduleAt('src/treeLayout.js',react);
- const ui=moduleAt('src/FamilyPeopleScreens.js',react,{'./treeLayout':layout,'./JiaIcon':()=>null});
+ const editing=moduleAt('src/familyEditing.js',react);
+ const rowHooks=hooks(),rowReact={...rowHooks,createElement};
+ const row=moduleAt('src/FamilyMemberRow.js',rowReact);
+ const ui=moduleAt('src/FamilyPeopleScreens.js',react,{'./treeLayout':layout,'./JiaIcon':()=>null,'./familyEditing':editing,'./FamilyMemberRow':{default:props=>{rowHooks.reset();return row.default(props)}}});
  const family={name:'测试家',members:[{id:'dad',name:'爸爸'},{id:'mom',name:'妈妈'},{id:'me',name:'我',fatherId:'dad',motherId:'mom'}]};
  const render=()=>{h.reset();return flatten(ui.FamilyTreeScreen({family,onPerson(){}}))};
  const canvas=nodes=>nodes.find(n=>n.props.testID==='family-tree-canvas');
