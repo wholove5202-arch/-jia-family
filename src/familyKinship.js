@@ -16,6 +16,27 @@ export function kinshipLabel(members,fromId,toId){
  const father=byId.get(a.fatherId),mother=byId.get(a.motherId);
  if(father?.fatherId===b.id)return '爷爷';if(father?.motherId===b.id)return '奶奶';
  if(mother?.fatherId===b.id)return '外公';if(mother?.motherId===b.id)return '外婆';
+ // Follow parent IDs from the selected person; names such as “爷爷” belong to
+ // the original person's viewpoint and must not be reused as kinship labels.
+ const thirdGenerationPath=(person,targetId,path=[],seen=new Set())=>{
+  if(!person||seen.has(person.id))return null;
+  if(path.length===3)return person.id===targetId?path:null;
+  const visited=new Set([...seen,person.id]);
+  for(const key of ['fatherId','motherId']){
+   const found=thirdGenerationPath(byId.get(person[key]),targetId,[...path,key],visited);
+   if(found)return found;
+  }
+  return null;
+ };
+ const ancestorPath=thirdGenerationPath(a,b.id);
+ if(ancestorPath){
+  const male=ancestorPath[2]==='fatherId';
+  if(ancestorPath[0]==='fatherId'&&ancestorPath[1]==='fatherId')return male?'曾祖父（太爷爷）':'曾祖母（太奶奶）';
+  const first=ancestorPath[0]==='fatherId'?'爸爸':'妈妈';
+  const grand=ancestorPath[1]==='fatherId'?(male?'爷爷':'奶奶'):(male?'外公':'外婆');
+  return `${male?'曾祖父':'曾祖母'}（${first}的${grand}）`;
+ }
+ if(thirdGenerationPath(b,a.id))return pair('曾孙','曾孙女','曾孙辈');
  if(siblings(father,b))return pair('伯伯或叔叔（长幼待确认）','姑姑','爸爸的兄弟姐妹');
  if(siblings(mother,b))return pair('舅舅','姨妈','妈妈的兄弟姐妹');
  for(const parentId of parents(b))if(siblings(a,byId.get(parentId))){const parent=byId.get(parentId);return parent.id===b.motherId?pair('外甥','外甥女','外甥或外甥女'):pair('侄子','侄女','侄子或侄女');}
