@@ -27,6 +27,9 @@ export default function JiaIcon({name,size=24,color='#965331'}){
  case 'bell':shapes=[box(5,4,14,15,7),line(3,18,18,1.7),circle(10,21,4,true),line(11.2,1,1.6,3)];break;
  case 'plus':shapes=[line(11,3,2,18),line(3,11,18,2)];break;
  case 'edit':shapes=[box(9,1,6,18,1,{transform:[{rotate:'40deg'}]}),line(4,21,17,1.7)];break;
+ case 'delete':shapes=[box(6,7,12,15,2),line(4,5,16,1.8),line(9,2,6,1.8),line(9,10,1.6,8),line(14,10,1.6,8)];break;
+ case 'download':shapes=[line(11,2,2,13),line(7,10,8,1.8,{transform:[{rotate:'45deg'}]}),line(11,10,8,1.8,{transform:[{rotate:'-45deg'}]}),line(4,20,16,1.8)];break;
+ case 'share':shapes=[box(4,9,16,13,3),line(11,2,2,13),line(7,5,7,1.8,{transform:[{rotate:'-45deg'}]}),line(11,5,7,1.8,{transform:[{rotate:'45deg'}]})];break;
  case 'back':shapes=[line(5,7,10,1.8,{transform:[{rotate:'-45deg'}]}),line(5,14,10,1.8,{transform:[{rotate:'45deg'}]})];break;
  default:shapes=[circle(3,3,18),circle(10,10,4,true)];
  }
