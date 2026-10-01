@@ -126,7 +126,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="entry")body=<FamilyEntry onCreate={()=>setScreen("families")} onJoin={()=>setScreen("families")} onExisting={()=>setScreen("home")}/>;
  else if(screen==="home")body=<Home/>;
  else if(screen==="families")body=<FamilyManagerScreen families={pub.families} activeFamilyId={pub.activeFamilyId} onCreate={createFamily} onSwitch={switchFamily}/>;
- else if(screen==="tree")body=<FamilyTreeScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} focusId={treeFocusId} onDelete={deleteFamilyPerson} onPerson={openPerson} onAdd={openAdd} onBack={back} onSwitchFamily={()=>setScreen("families")}/>;
+ else if(screen==="tree")body=<FamilyTreeScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} focusId={treeFocusId} families={pub.families} onSelectFamily={async id=>{await savePublic(state=>({...state,activeFamilyId:id}));setPerson(null);setRelativeAnchor(null);setTreeFocusId("me")}} onDelete={deleteFamilyPerson} onPerson={openPerson} onAdd={openAdd} onBack={back} onSwitchFamily={()=>setScreen("families")}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={{...person,avatarUri:personAvatar(person)}} onSave={savePerson} onBack={back}/>;
  else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={saveRelative}/>;
  else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>{setUploadAssets([]);setScreen("add")}} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
