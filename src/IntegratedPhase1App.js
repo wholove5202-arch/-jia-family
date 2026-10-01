@@ -25,7 +25,7 @@ import {HonorsScreen,TimelineScreen,AdviceScreen,MemorialMemoriesScreen} from '.
 import PrivateAccessScreen from './PrivateAccessScreen';
 import VoiceMemoryScreen from './VoiceMemoryScreen';
 import FutureLetterScreen from './FutureLetterScreen';
-import {endMarriage} from './familyEditing';
+import {endMarriage,removePerson,addRelative} from './familyEditing';
 import OldPhotoScanner from './OldPhotoScanner';
 const privateScreens=new Set(['private','privateMedia','privateNotes','miss','legacy','life','voice','password','futureLetter']);
 const C=theme;
@@ -63,6 +63,23 @@ export default function IntegratedPhase1App(){
  const openAdd=p=>{setRelativeAnchor(p||family.members[0]);setScreen("addRelative")};
  const finishPerson=p=>{if(history.current.at(-1)?.screen==='person')history.current.pop();setPerson(p);current.current='person';rawSetScreen('person');};
  const savePerson=async p=>{await savePublic(state=>({...state,families:state.families.map(f=>f.id===family.id?{...f,members:f.members.map(x=>x.id===p.id?{...x,...p}:x)}:f)}));finishPerson(p);};
+ const saveRelative=async(record,relation,options)=>{
+  let saved;
+  await savePublic(state=>({...state,families:state.families.map(f=>{
+   if(f.id!==family.id)return f;
+   const members=addRelative(f.members,relativeAnchor?.id||f.members[0]?.id,relation,record,options);
+   saved=members.find(p=>p.id===record.id);
+   return {...f,members};
+  })}));
+  finishPerson(saved);
+ };
+ const deletePerson=async()=>{
+  const id=person.id;
+  await savePublic(state=>({...state,families:state.families.map(f=>f.id===family.id?{...f,members:removePerson(f.members,id)}:f)}));
+  history.current=history.current.filter(entry=>entry.person?.id!==id&&!['editPerson','addRelative','relation'].includes(entry.screen));
+  setPerson(null);setRelativeAnchor(null);if(treeFocusId===id)setTreeFocusId('me');
+  current.current='tree';rawSetScreen('tree');
+ };
  const personAvatar=p=>p?.avatarUri||family.media?.find(m=>m.id===publicPersonAvatar(pub,p?.id)?.mediaId)?.uri;
  const openMedia=m=>{setSelectedMedia(m);setScreen("tagMedia")};
  const saveTagged=m=>{patchFamily({media:family.media.map(x=>x.id===m.id?m:x)});setSelectedMedia(m);setScreen("album")};
@@ -90,7 +107,7 @@ export default function IntegratedPhase1App(){
   {(family.notes||[]).filter(n=>!n.private&&n.visibility!=="private").slice(0,3).map(n=><TouchableOpacity key={n.id} style={s.memoryCard} onPress={()=>setScreen("memory")}><View style={[s.memorySymbol,{backgroundColor:"#FFF0E6"}]}><JiaIcon name="notes" size={24} color="#378BCC"/></View><View style={{flex:1}}><Text style={s.memoryTitle}>{n.title||"一段家庭记忆"}</Text><Text numberOfLines={2} style={s.homeHint}>{n.text||"查看这段记忆"}</Text></View><Text style={s.sectionMore}>›</Text></TouchableOpacity>)}
   {!!family.media?.length&&<TouchableOpacity style={s.memoryCard} onPress={()=>setScreen("album")}><View style={s.memorySymbol}><JiaIcon name="album" size={24} color="#378BCC"/></View><View style={{flex:1}}><Text style={s.memoryTitle}>家人上传了新的照片</Text><Text style={s.homeHint}>家庭相册现有 {family.media.length} 张照片和视频</Text></View><Text style={s.sectionMore}>›</Text></TouchableOpacity>}
  </ScrollView>;
- const Person=()=> <PersonProfileScreen person={person} family={family} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onRelation={()=>setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
+ const Person=()=> <PersonProfileScreen person={person} family={family} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onDelete={deletePerson} onRelation={()=>setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
 
  const privateMenu=[
   ["shieldLock","二级密码（可选）","给私密空间再加一道保护","password","#A86D22","#EEF6FC"],
@@ -107,7 +124,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="families")body=<FamilyManagerScreen families={pub.families} activeFamilyId={pub.activeFamilyId} onCreate={createFamily} onSwitch={switchFamily}/>;
  else if(screen==="tree")body=<FamilyTreeScreen family={{...family,members:family.members.map(p=>({...p,avatarUri:personAvatar(p)}))}} focusId={treeFocusId} onPerson={openPerson} onAdd={openAdd} onBack={back} onSwitchFamily={()=>setScreen("families")}/>;
  else if(screen==="editPerson")body=<PersonEditorScreen key={person.id} person={{...person,avatarUri:personAvatar(person)}} onSave={savePerson} onBack={back}/>;
- else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={(members,id)=>{updateMembers(members);finishPerson(members.find(p=>p.id===id))}}/>;
+ else if(screen==="addRelative")body=<AddRelativeScreen key={relativeAnchor?.id||"new"} anchor={relativeAnchor} members={family.members} onBack={back} onSave={saveRelative}/>;
  else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>setScreen("add")} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
@@ -138,7 +155,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="film")body=isMember?<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>AI回忆影片</Text><Text style={s.muted}>会员功能 · AI影片生成服务将在后续阶段接入。</Text></ScrollView>:<MemberGate title="AI回忆影片" detail="会员可使用 AI 整理家庭影像并生成回忆影片。" />;
  else body=<ScrollView contentContainerStyle={s.page}><Text style={s.heroT}>{screen}</Text></ScrollView>;
 
- return <SafeAreaView style={s.app}>{!['welcome','home','my','album','tree','person','editPerson','addRelative','relation','futureLetter'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{!["welcome","entry","futureLetter","album","add","editPerson"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
+ return <SafeAreaView style={s.app}>{!['welcome','home','my','album','tree','person','editPerson','addRelative','relation','futureLetter'].includes(screen)&&<TouchableOpacity accessibilityLabel="返回上一页" onPress={back} style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:20,paddingVertical:12}}><JiaIcon name="back" size={20}/><Text style={{color:C.brown,fontSize:15}}>返回</Text></TouchableOpacity>}<View style={{flex:1}}>{body}</View>{!["welcome","entry","futureLetter","album","add","editPerson","addRelative"].includes(screen)&&<Bottom go={goTab} active={screen}/>}</SafeAreaView>
 }
 function MemberGate({title,detail}){return <View style={{flex:1,justifyContent:"center",padding:28,backgroundColor:C.bg}}><View style={{alignItems:"center",backgroundColor:"#FFFFFF",borderRadius:26,padding:28,borderWidth:1,borderColor:C.line}}><View style={{width:64,height:64,borderRadius:22,backgroundColor:"#EDF4F8",alignItems:"center",justifyContent:"center",marginBottom:18}}><JiaIcon name="lock" size={29}/></View><Text style={{fontSize:23,fontWeight:"800",color:C.deep}}>{title}</Text><Text style={{fontSize:14,lineHeight:22,color:C.muted,textAlign:"center",marginTop:10}}>{detail}</Text><TouchableOpacity onPress={()=>Alert.alert("会员中心","正式会员购买将在支付系统接入后开放。")} style={{backgroundColor:C.brown,borderRadius:20,paddingVertical:14,paddingHorizontal:32,marginTop:24}}><Text style={{color:"#fff",fontWeight:"700"}}>开通会员</Text></TouchableOpacity></View></View>}
 function OldPhotoMemberScreen({onChoose}){return <ScrollView contentContainerStyle={[s.page,{paddingTop:28}]}><Text style={s.heroT}>扫描老照片</Text><Text style={s.muted}>会员功能 · 将纸质老照片拍下来，自动裁切、矫正后保存原图，再选择是否 AI 修复。</Text><View style={{height:280,borderRadius:26,marginTop:24,backgroundColor:"#F4F6F6",alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:C.line}}><JiaIcon name="scan" size={54}/><Text style={[s.muted,{marginTop:14}]}>扫描取景框</Text></View><TouchableOpacity style={[s.action,{justifyContent:"center",marginTop:20,backgroundColor:C.brown}]} onPress={onChoose}><Text style={{color:"#fff",fontWeight:"700"}}>选择 / 拍摄老照片</Text></TouchableOpacity><Text style={[s.muted,{textAlign:"center",marginTop:10}]}>下一步将接入相机边缘识别与透视矫正。</Text></ScrollView>}
