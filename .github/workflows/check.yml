@@ -18,6 +18,7 @@ jobs:
       - run: npm run check:syntax
       - run: node scripts/parents-check.cjs
       - run: node scripts/relative-flow-check.cjs
+      - run: node scripts/tree-mode-check.cjs
       - run: npx expo install --check
       - run: npx expo export --platform ios --platform android --output-dir dist-native
         env:
