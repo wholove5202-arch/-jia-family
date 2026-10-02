@@ -44,9 +44,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run check:syntax
-          node scripts/parents-check.cjs
-          node scripts/relative-flow-check.cjs
-          node scripts/tree-mode-check.cjs
+          npm run check:behavior
           npx expo install --check
       - name: Configure isolated phone test app
         run: |
