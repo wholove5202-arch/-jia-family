@@ -25,4 +25,24 @@ async function checkScreen(){
  slots.length=0;nodes=render();assert(nodes.some(n=>n.type==='Text'&&text(n)==='兄弟的生日'),'saved preference survives remount');assert.equal(JSON.stringify(people),before);
  console.log('PASS real important-days filtering, durable preference save, failed-save retry and remount without modifying people');
 }
-checkScreen().catch(e=>{console.error(e);process.exitCode=1});
+function checkMemorialDays(){
+ slots.length=0;
+ const members=people.map(p=>p.id==='gp'?{...p,dead:true,deathDate:'2020-10-03'}:p.id==='wife'?{...p,dead:false,deathDate:'2020-10-04'}:p.id==='daughter'?{...p,dead:true,deathDate:'2020-02-30'}:p.id==='bro'?{...p,dead:true,deathDate:'2020-10-02'}:p);
+ const family={members},before=JSON.stringify(members);let viewed;
+ const render=()=>{cursor=0;const tree=ui.default({family,onPerson:p=>viewed=p});slots[0]=new Date('2026-10-02T12:00:00');cursor=0;return flatten(ui.default({family,onPerson:p=>viewed=p}))};
+ let nodes=render();
+ const memorial=nodes.find(n=>n.type==='View'&&n.props.testID==='important-day-death-gp');
+ assert(memorial,'deceased parent with a valid death date must have an annual memorial entry');
+ assert(text(memorial).includes('父母的忌日'));assert(text(memorial).includes('公历'));assert(text(memorial).includes('还有 1 天'));
+ assert(!nodes.some(n=>n.props.testID==='important-day-death-wife'),'living members must not have memorial entries');
+ assert(!nodes.some(n=>n.props.testID==='important-day-death-daughter'),'invalid death dates must not become memorial entries');
+ assert(!nodes.some(n=>n.props.testID==='important-day-death-bro'),'collateral memorials default off');
+ flatten(memorial).find(n=>n.props.accessibilityLabel==='查看父母的资料').props.onPress();assert.equal(viewed.id,'gp');
+ family.dayReminderPreferences={me:{gp:false,bro:true}};nodes=render();
+ assert(!nodes.some(n=>n.props.testID==='important-day-death-gp'));assert(!nodes.some(n=>n.type==='Text'&&text(n)==='父母的诞辰'));
+ assert(nodes.some(n=>n.props.testID==='important-day-death-bro'&&text(n).includes('就是今天')));
+ assert.equal(ui.nextAnniversary({date:'2020-02-29'},new Date('2026-03-01T12:00:00')).date,'2028-02-29');
+ assert.equal(JSON.stringify(members),before);
+ console.log('PASS memorial dates share person scope, reject living/invalid records, show annual countdown and open profiles without changing data');
+}
+checkScreen().then(checkMemorialDays).catch(e=>{console.error(e);process.exitCode=1});
