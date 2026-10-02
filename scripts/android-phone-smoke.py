@@ -36,7 +36,7 @@ def snapshot(name):
     return ET.fromstring(xml)
 
 
-def wait_for(label, name, scroll=False):
+def wait_for(label, name, scroll=False, checkable=False):
     deadline = time.monotonic() + 90
     swipes = 0
     while time.monotonic() < deadline:
@@ -49,6 +49,7 @@ def wait_for(label, name, scroll=False):
         else:
             node = next((n for n in root.iter('node')
                          if n.attrib.get('package') == PACKAGE
+                         and (not checkable or n.attrib.get('checkable') == 'true')
                          and label in (n.attrib.get('text', '') + n.attrib.get('content-desc', ''))), None)
             if node is not None:
                 return node
@@ -73,7 +74,7 @@ def main():
         tap('家族树', '03-home')
         wait_for('亲戚怎么称呼', '04-tree', scroll=True)
         tap('设置家庭分支可见范围', '04-tree', scroll=True)
-        switch = wait_for('允许关联家庭查看', '05-branch-settings')
+        switch = wait_for('允许关联家庭查看', '05-branch-settings', checkable=True)
         assert switch.attrib.get('checked') == 'true', 'Branch preference must default on'
         adb('shell', 'input', 'tap', *center(switch))
         tap('保存家庭分支设置', '05-branch-off')
@@ -84,7 +85,7 @@ def main():
         tap('先看看已有的家庭', '07-family-entry')
         tap('家族树', '08-home')
         tap('设置家庭分支可见范围', '09-tree', scroll=True)
-        switch = wait_for('允许关联家庭查看', '10-persisted-branch')
+        switch = wait_for('允许关联家庭查看', '10-persisted-branch', checkable=True)
         assert switch.attrib.get('checked') == 'false', 'Closed branch preference lost after restart'
         assert adb('shell', 'pidof', PACKAGE).strip(), 'App process missing'
         print('PASS installed APK: welcome, family entry, home, tree, default-on branch, saved off preference survives relaunch')
