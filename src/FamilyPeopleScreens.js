@@ -69,6 +69,29 @@ export function FamilyTreeScreen({family,onPerson,focusId='me',onBack,onSwitchFa
    for(let n=0;n<kids.length;n++)edges.push(line('child:'+key+':'+n,kids[n].x,branchY,1.5,childTop-branchY));
   }
  }
+ // Explicit sibling links survive when their parents are unrecorded or
+ // outside the displayed generations. Do not invent ancestor records.
+ const siblingGroups=[],siblingLabels=[],siblingGraph=new Map();
+ for(const p of members)for(const q of members){
+  if(p.id>=q.id||!layout.positions[p.id]||!layout.positions[q.id]||layout.positions[p.id].y!==layout.positions[q.id].y)continue;
+  const commonParents=[p.fatherId,p.motherId].filter(id=>id&&(q.fatherId===id||q.motherId===id));
+  const confirmed=commonParents.length||(p.siblingLinks||[]).some(l=>l.personId===q.id)||(q.siblingLinks||[]).some(l=>l.personId===p.id);
+  if(!confirmed||commonParents.some(id=>layout.positions[id]))continue;
+  for(const [a,b] of [[p.id,q.id],[q.id,p.id]]){if(!siblingGraph.has(a))siblingGraph.set(a,new Set());siblingGraph.get(a).add(b);}
+ }
+ const siblingSeen=new Set();
+ for(const id of siblingGraph.keys()){
+  if(siblingSeen.has(id))continue;
+  const group=[],pending=[id];
+  while(pending.length){const next=pending.pop();if(siblingSeen.has(next))continue;siblingSeen.add(next);group.push(next);pending.push(...siblingGraph.get(next));}
+  siblingGroups.push(group.sort());
+ }
+ for(const ids of siblingGroups){
+  const key=ids.join(':'),ps=ids.map(id=>layout.positions[id]),left=Math.min(...ps.map(p=>p.x)),right=Math.max(...ps.map(p=>p.x)),y=ps[0].y-2;
+  edges.push(line('sibling:'+key+':bar',left,y,right-left,1.5));
+  for(const id of ids)edges.push(line('sibling:'+key+':person:'+id,layout.positions[id].x,y,1.5,8));
+  siblingLabels.push(<Text key={'sibling-label:'+key} pointerEvents="none" style={{position:'absolute',left:(left+right)/2-36,top:y-16,width:72,fontSize:11,lineHeight:14,textAlign:'center',color:'#7D9587'}}>兄弟姐妹</Text>);
+ }
  // At a crossing, leave a small gap in the horizontal line so unrelated
  // vertical branches do not look like a shared parent/child junction.
  const renderedEdges=edges.flatMap(e=>{
@@ -83,7 +106,7 @@ export function FamilyTreeScreen({family,onPerson,focusId='me',onBack,onSwitchFa
  const showingList=mode==='list'||query.trim().length>0;
  const listed=layoutFamily(members,true).rows.flat().filter(p=>!query.trim()||(p.name||'').includes(query.trim())||(p.relation||'').includes(query.trim()));
  const treeView=<View testID="family-tree-viewport" style={[s.treeViewport,{flex:0,flexShrink:0,minHeight:390,height:390,marginBottom:12}]} onLayout={e=>setViewport({w:e.nativeEvent.layout.width,h:e.nativeEvent.layout.height})} {...(mode==='full'?responder.panHandlers:{})}>
- <View testID="family-tree-canvas" style={{position:'absolute',left:(viewport.w-layout.width)/2,top:(viewport.h-layout.height)/2,width:layout.width,height:layout.height,transform:[{translateX:mode==='full'?offset.x:0},{translateY:mode==='full'?offset.y:0},{scale}]}}>{renderedEdges}{layout.rows.flat().map(p=>{const pos=layout.positions[p.id];return <TouchableOpacity key={p.id} accessibilityRole="button" accessibilityLabel={'查看'+p.name} onPress={()=>onPerson(p)} style={[s.treePerson,{left:pos.x-52,top:pos.y}]}><View style={[s.treeAvatarRing,p.id===focusId&&s.treeAvatarFocus]}><PersonAvatar person={p} size={64}/></View><Text numberOfLines={1} style={s.treePersonName}>{p.name}</Text>{p.dead?<Text style={s.treePersonState}>已故</Text>:null}</TouchableOpacity>})}</View>
+ <View testID="family-tree-canvas" style={{position:'absolute',left:(viewport.w-layout.width)/2,top:(viewport.h-layout.height)/2,width:layout.width,height:layout.height,transform:[{translateX:mode==='full'?offset.x:0},{translateY:mode==='full'?offset.y:0},{scale}]}}>{renderedEdges}{siblingLabels}{layout.rows.flat().map(p=>{const pos=layout.positions[p.id];return <TouchableOpacity key={p.id} accessibilityRole="button" accessibilityLabel={'查看'+p.name} onPress={()=>onPerson(p)} style={[s.treePerson,{left:pos.x-52,top:pos.y}]}><View style={[s.treeAvatarRing,p.id===focusId&&s.treeAvatarFocus]}><PersonAvatar person={p} size={64}/></View><Text numberOfLines={1} style={s.treePersonName}>{p.name}</Text>{p.dead?<Text style={s.treePersonState}>已故</Text>:null}</TouchableOpacity>})}</View>
  {!members.length?<View style={s.treeEmpty}><Text style={s.treeHeading}>这里是你的家族树</Text><Text style={s.treeSubtitle}>添加的家人会按关系显示在这里</Text></View>:null}
  {mode==='full'&&<View style={s.treeControls}>{[['−','缩小家族树',()=>setZoom(z=>Math.max(.6,z/1.25))],['居中','居中家族树',reset],['＋','放大家族树',()=>setZoom(z=>Math.min(5,z*1.25))]].map(([label,a11y,action])=><TouchableOpacity key={label} accessibilityRole="button" accessibilityLabel={a11y} onPress={action} style={s.treeControl}><Text style={[s.treeControlLabel,label==='居中'&&{fontSize:12}]}>{label}</Text></TouchableOpacity>)}</View>}</View>;
  return <View style={s.treeRoot}><View style={s.familyIntro}><View style={s.familyIntroTop}><TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="返回上一页" style={s.familyIntroBack}><JiaIcon name="back" size={18} color="#7D9587"/></TouchableOpacity><Text style={s.familyEyebrow}>OUR FAMILY · 家的故事</Text></View><Text style={s.familyIntroTitle}>家人</Text><Text style={s.familyIntroCopy}>从一个人开始，慢慢把我们的来处连起来。</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.familyChoices}>{(families.length?families:[family]).map(f=><TouchableOpacity key={f.id} disabled={switching} accessibilityRole="button" accessibilityLabel={'切换到'+f.name} accessibilityState={{selected:f.id===family.id,disabled:switching}} onPress={()=>chooseFamily(f.id)} style={[s.familyChoice,f.id===family.id&&s.familyChoiceActive]}><Text numberOfLines={1} style={[s.familyChoiceText,f.id===family.id&&s.familyChoiceTextActive]}>{f.name}</Text></TouchableOpacity>)}</ScrollView>{!!switchError&&<Text accessibilityRole="alert" style={s.familySwitchError}>{switchError}</Text>}</View>

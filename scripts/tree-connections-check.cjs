@@ -88,3 +88,31 @@ assert(fullNodes.some(n=>n.props.accessibilityLabel==='查看爷爷'));
 assert(!fullNodes.some(n=>n.props.accessibilityLabel==='查看岳父'||n.props.accessibilityLabel==='查看姐夫的父亲'));
 assert(fullNodes.some(n=>n.type?.name==='FamilyTreeExtras'),'family branches remain below the full tree');
 console.log('PASS simplified main tree keeps spouses/children, hides both in-law families without deleting data, and retains branch access');
+
+// A father-centered family with no recorded parents must still show confirmed
+// sibling relationships, separately from the spouse and child connectors.
+let fatherFamily=[{id:'me',name:'父亲',gender:'男'}];
+fatherFamily=editing.addRelative(fatherFamily,'me','spouse',{id:'wife',name:'夫人'});
+fatherFamily=editing.addRelative(fatherFamily,'me','sister',{id:'sister',name:'姊妹'});
+fatherFamily=editing.addRelative(fatherFamily,'me','brother',{id:'brother',name:'兄弟2'});
+fatherFamily=editing.addRelative(fatherFamily,'me','son',{id:'son',name:'儿子1'});
+fatherFamily=editing.addRelative(fatherFamily,'son','son',{id:'grandson',name:'孙子'});
+const fatherBefore=JSON.stringify(fatherFamily);
+const fatherNodes=flatten(screenModule.FamilyTreeScreen({family:{name:'快乐家族',members:fatherFamily}}));
+const siblingEdges=fatherNodes.filter(n=>String(n.props.key||'').startsWith('sibling:'));
+assert(siblingEdges.length,'confirmed siblings with unrecorded parents must have visible relationship lines');
+for(const id of ['me','sister','brother'])assert(siblingEdges.some(n=>n.props.key.endsWith(':person:'+id)),id+' joins the sibling bracket');
+assert(!siblingEdges.some(n=>n.props.key.endsWith(':person:wife')),'spouse must not join the sibling bracket');
+assert(fatherNodes.some(n=>n.children.includes('兄弟姐妹')),'sibling connection must be labeled to distinguish it from marriage');
+assert.equal(JSON.stringify(fatherFamily),fatherBefore,'drawing sibling links must not invent parents or change records');
+console.log('PASS father-centered sibling connections without invented ancestors or spouse confusion');
+const croppedFamily=[...fatherFamily,{id:'gp',name:'父亲的父亲'}].map(p=>['me','sister','brother'].includes(p.id)?{...p,fatherId:'gp',siblingLinks:[]}:p);
+const croppedNodes=flatten(screenModule.FamilyTreeScreen({family:{name:'快乐家族',members:croppedFamily}}));
+assert(!croppedNodes.some(n=>n.props.accessibilityLabel==='查看父亲的父亲'));
+assert(croppedNodes.some(n=>String(n.props.key||'').startsWith('sibling:')),'hidden common ancestors still leave siblings connected');
+const ancestorNodes=flatten(fullScreen.FamilyTreeScreen({family:{name:'快乐家族',members:croppedFamily}}));
+assert(ancestorNodes.some(n=>n.props.accessibilityLabel==='查看父亲的父亲'));
+assert(!ancestorNodes.some(n=>String(n.props.key||'').startsWith('sibling:')),'visible common parents already connect siblings without duplicate brackets');
+const independent=fatherFamily.map(p=>({...p,siblingLinks:[]}));
+assert(!flatten(screenModule.FamilyTreeScreen({family:{members:independent}})).some(n=>String(n.props.key||'').startsWith('sibling:')),'same-row positions alone never imply a sibling relationship');
+console.log('PASS sibling connectors adapt to cropped and visible parents and require confirmed relationships');
