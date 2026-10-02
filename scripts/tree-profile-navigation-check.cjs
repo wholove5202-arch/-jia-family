@@ -16,3 +16,17 @@ profile.props.onRelation(me);
 const relativeContainer=flat(render()).find(e=>e.type?.name==='Person');
 assert(relativeContainer,'tapping a relative must open their profile, not the relation editor');
 assert.equal(relativeContainer.type().props.person.id,'me');
+// A prefilled person stays visible, but their profile must not imply that
+// they have registered or conceal who created their basic information.
+const pending={id:'pending',name:'待认领家人',claimed:false,createdById:'me',dead:true};
+const profileNodes=p=>flat(screens.PersonProfileScreen({...profile.props,person:p,members:[me,p],family:{...family,members:[me,p]}}));
+const pendingNodes=profileNodes(pending);
+assert(pendingNodes.some(n=>n.children.includes('家人代建 · 待认领')),'pending status must appear on the profile');
+assert(pendingNodes.some(n=>n.children.includes('由我代填')),'recorded creator should be identified');
+assert(pendingNodes.some(n=>n.children.includes('查看纪念档案 ›')),'deceased and unclaimed are independent states');
+const historicalNodes=profileNodes({...pending,createdById:undefined});
+assert(historicalNodes.some(n=>n.children.includes('代填来源未记录')),'historical sources must not be fabricated');
+const claimedNodes=profileNodes({...pending,claimed:true,dead:false});
+assert(!claimedNodes.some(n=>n.children.includes('家人代建 · 待认领')));
+assert(claimedNodes.some(n=>n.children.includes('已认领 · 本人维护')));
+console.log('PASS pending profile status, factual creator attribution, historical fallback and independent deceased status');

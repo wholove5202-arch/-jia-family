@@ -45,7 +45,11 @@ async function main(){
  console.log('PASS deletion wired to persisted family state, keeps photo and returns to tree after write');
  ha.slots[1]=members[0];ha.slots[2]='addRelative';ha.slots[8].current='addRelative';nodes=renderApp();const addNode=nodes.find(n=>n.type==='AddRelativeScreen');let adding=addNode.props.onSave({id:'new-son',name:'新儿子',claimed:false,gender:'男'},'son',{parentSide:'father'});assert.equal(ha.slots[2],'addRelative');resolveWrite();await adding;assert.equal(ha.slots[2],'person');assert.equal(ha.slots[3].motherId,'wife');assert.equal(ha.slots[3].id,'new-son');
  assert.equal(writes.at(-1).families[0].members.find(p=>p.id==='new-son').motherId,'wife');
- console.log('PASS successful add persists both parents before opening new profile');
+ assert.equal(ha.slots[3].createdById,'me','new prefilled people retain the actual local creator');
+ assert.equal(ha.slots[3].createdInFamilyId,'test');
+ assert(ha.slots[3].createdAt&&Number.isFinite(Date.parse(ha.slots[3].createdAt)));
+ assert.equal(state.families[0].members.find(p=>p.id==='new-son').createdById,'me','creator attribution is persisted with the relationship');
+ console.log('PASS successful add persists both parents and creator attribution before opening new profile');
  const links=[{id:'me',name:'我',spouseIds:['x'],fatherId:'x',siblingLinks:[{personId:'x'}],marriages:[{personId:'x',status:'married'}]},{id:'x',name:'亲人',claimed:false},{id:'child',motherId:'x',fatherId:'me'}];const detached=domain.removePerson(links,'x');assert.equal(detached.length,2);assert.equal(detached[0].fatherId,null);assert.equal(detached[0].spouseIds.length,0);assert.equal(detached[0].siblingLinks.length,0);assert.equal(detached[1].motherId,null);assert.equal(detached[1].fatherId,'me');assert.throws(()=>domain.removePerson(links,'me'));assert.throws(()=>domain.removePerson([{id:'claimed',claimed:true}],'claimed'));
  console.log('PASS delete detaches relations and preserves editing permissions');
 }
