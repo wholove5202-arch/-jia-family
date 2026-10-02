@@ -50,6 +50,16 @@ async function main(){
  await nodes.find(n=>n.props.accessibilityLabel==='切换到我的小家庭').props.onPress();assert.deepEqual(switchCalls,['f2']);nodes=render();
  failSwitch=true;await nodes.find(n=>n.props.accessibilityLabel==='切换到我的小家庭').props.onPress();nodes=render();assert(nodes.some(n=>text(n)==='切换失败，请再试一次'));failSwitch=false;await nodes.find(n=>n.props.accessibilityLabel==='切换到我的小家庭').props.onPress();assert.equal(switchCalls.length,3);
  console.log('PASS direct family switch awaits save, permits retry and search is confined to relative list');
+ // A real screen must use the chosen person, preserve parents when only a
+ // sibling has grandchildren, and allow deliberate expansions without edits.
+ family.members=[{id:'gp',name:'长辈'},{id:'me',name:'我',fatherId:'gp',siblingLinks:[{personId:'bro'}]},{id:'bro',name:'兄弟',fatherId:'gp'},{id:'son',name:'孩子',fatherId:'me'},{id:'nephew',name:'侄子',fatherId:'bro'},{id:'greatNephew',name:'兄弟的孙辈',fatherId:'nephew'}];
+ nodes=render();assert(nodes.some(n=>n.props.accessibilityLabel==='查看长辈'));assert(!nodes.some(n=>n.props.accessibilityLabel==='查看兄弟的孙辈'));
+ nodes.find(n=>n.props.accessibilityLabel==='展开兄弟的孙辈').props.onPress();nodes=render();assert(nodes.some(n=>n.props.accessibilityLabel==='查看兄弟的孙辈'));assert(nodes.some(n=>n.props.accessibilityLabel==='查看长辈'));
+ nodes.find(n=>n.props.accessibilityLabel==='选择家树查看中心').props.onPress();nodes=render();nodes.find(n=>n.props.accessibilityLabel==='以兄弟为中心查看').props.onPress();nodes=render();assert(!nodes.some(n=>n.props.accessibilityLabel==='查看长辈'));assert(nodes.some(n=>n.props.accessibilityLabel==='查看兄弟的孙辈'));
+ nodes.find(n=>n.props.accessibilityLabel==='展开父母').props.onPress();nodes=render();assert(nodes.some(n=>n.props.accessibilityLabel==='查看长辈'));
+ nodes.find(n=>n.props.accessibilityLabel==='收起父母').props.onPress();nodes=render();assert(!nodes.some(n=>n.props.accessibilityLabel==='查看长辈'));
+ assert.equal(family.members[1].fatherId,'gp');
+ console.log('PASS real screen focal generations, peer expansion and reversible parent expansion without changing relationships');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
 

@@ -27,7 +27,7 @@ export function familyTreeMembers(members,focusId='me'){
 }
 
 // Generations come from parent links; current spouses share a generation.
-export function layoutFamily(members,all=false){
+export function layoutFamily(members,all=false,options={}){
  const ids=new Set(members.map(p=>p.id)),parent=new Map(members.map(p=>[p.id,p.id]));
  const root=id=>{while(parent.get(id)!==id)id=parent.get(id);return id;};
  for(const p of members)for(const sid of [...(p.spouseIds||[]),...(p.siblingLinks||[]).map(l=>l.personId)])if(ids.has(sid)){const a=root(p.id),b=root(sid);if(a!==b)parent.set(b,a);}
@@ -43,8 +43,19 @@ export function layoutFamily(members,all=false){
  for(const k of order)for(const p of groups.get(k))for(const id of [p.fatherId,p.motherId])if(ids.has(id)&&root(id)!==k){const pk=root(id);levels.set(pk,Math.max(levels.get(pk),levels.get(k)-1));}
  for(const k of order.slice().reverse())for(const p of groups.get(k))for(const id of [p.fatherId,p.motherId])if(ids.has(id)&&root(id)!==k)levels.set(k,Math.max(levels.get(k),levels.get(root(id))+1));
  const bottom=Math.max(0,...levels.values());
- const shown=members.filter(p=>all||levels.get(root(p.id))>=bottom-2),rows=[];
- for(let i=all?0:Math.max(0,bottom-2);i<=bottom;i++){const row=[];for(const [k,ps] of groups)if(levels.get(k)===i)row.push(...ps.filter(p=>shown.includes(p)));if(row.length)rows.push(row);}
+ const focus=members.find(p=>p.id===options.focusId),extra=new Set();
+ const children=id=>members.filter(p=>p.fatherId===id||p.motherId===id);
+ const grandchildren=id=>children(id).flatMap(p=>children(p.id));
+ const hasGrandchildren=!!focus&&grandchildren(focus.id).length>0;
+ const focalLevel=focus?levels.get(root(focus.id)):0;
+ const minLevel=focus?Math.max(0,focalLevel-(hasGrandchildren?0:1)):Math.max(0,bottom-2);
+ const maxLevel=focus?focalLevel+(hasGrandchildren?2:1):bottom;
+ const includePerson=id=>{if(!ids.has(id))return;extra.add(id);const p=members.find(p=>p.id===id);for(const sid of p.spouseIds||[])if(ids.has(sid))extra.add(sid);for(const q of members)if((q.spouseIds||[]).includes(id))extra.add(q.id);};
+ if(focus&&options.showParents)for(const id of [focus.fatherId,focus.motherId])if(ids.has(id))extra.add(id);
+ if(focus)for(const id of options.expandedIds||[])if(ids.has(id)&&levels.get(root(id))===focalLevel)for(const p of grandchildren(id))includePerson(p.id);
+ const shown=members.filter(p=>all||extra.has(p.id)||(levels.get(root(p.id))>=minLevel&&levels.get(root(p.id))<=maxLevel)),rows=[];
+ const shownLevels=shown.map(p=>levels.get(root(p.id)));
+ for(let i=Math.min(...shownLevels);i<=Math.max(...shownLevels);i++){const row=[];for(const [k,ps] of groups)if(levels.get(k)===i)row.push(...ps.filter(p=>shown.includes(p)));if(row.length)rows.push(row);}
  // Keep a parent between two partners, so each child's couple connector
  // does not run through the other partner's avatar.
  const partners=new Map(members.map(p=>[p.id,new Set()]));
@@ -63,5 +74,7 @@ export function layoutFamily(members,all=false){
  }
  const width=Math.max(320,...rows.map(r=>r.length*112+32)),height=Math.max(220,(rows.length-1)*166+152),positions={};
  rows.forEach((row,i)=>row.forEach((p,j)=>positions[p.id]={x:(width-row.length*112)/2+j*112+56,y:i*166+20}));
- return {rows,width,height,positions,totalGenerations:bottom+1};
+ const expandablePeers=focus?members.filter(p=>p.id!==focus.id&&levels.get(root(p.id))===focalLevel&&grandchildren(p.id).some(q=>!shown.includes(q))):[];
+ const hiddenParents=focus?[focus.fatherId,focus.motherId].filter(id=>ids.has(id)&&!shown.some(p=>p.id===id)):[];
+ return {rows,width,height,positions,totalGenerations:bottom+1,hasGrandchildren,expandablePeers,hiddenParents};
 }

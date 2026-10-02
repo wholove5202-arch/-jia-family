@@ -5,8 +5,9 @@ const layoutModule=moduleAt(root+'/src/treeLayout.js');
 const react={createElement:(type,props,...children)=>({type,props:props||{},children}),useState:x=>[x,()=>{}],useRef:x=>({current:x})};
 const native={View:'View',Text:'Text',TouchableOpacity:'TouchableOpacity',Image:'Image',ScrollView:'ScrollView',StyleSheet:{create:x=>x},PanResponder:{create:()=>({panHandlers:{}})},Platform:{OS:'web'}};
 const screenModule=moduleAt(root+'/src/FamilyPeopleScreens.js',{'react':react,'react-native':native,'./treeLayout':layoutModule});
+const geometryModule=moduleAt(root+'/src/FamilyPeopleScreens.js',{'react':{...react,useState:x=>[x==='three'?'full':x,()=>{}]},'react-native':native,'./treeLayout':layoutModule});
 function flatten(node){return Array.isArray(node)?node.flatMap(flatten):node&&typeof node==='object'?[node,...flatten(node.children||[])]:[];}
-function segments(members){const nodes=flatten(screenModule.FamilyTreeScreen({family:{name:'测试家庭',members}}));return nodes.filter(n=>/^(spouse|trunk|branch|child):/.test(n.props.key||'')).map(n=>{const s=n.props.style;return {key:n.props.key,x:s.left,y:s.top,w:s.width,h:s.height}});}
+function segments(members){const nodes=flatten(geometryModule.FamilyTreeScreen({family:{name:'测试家庭',members}}));return nodes.filter(n=>/^(spouse|trunk|branch|child):/.test(n.props.key||'')).map(n=>{const s=n.props.style;return {key:n.props.key,x:s.left,y:s.top,w:s.width,h:s.height}});}
 function touch(a,b){return a.x<=b.x+b.w+.1&&b.x<=a.x+a.w+.1&&a.y<=b.y+b.h+.1&&b.y<=a.y+a.h+.1;}
 function connected(lines,a,b){const seen=new Set([a]);let changed=true;while(changed){changed=false;for(let i=0;i<lines.length;i++)if(!seen.has(i)&&[...seen].some(j=>touch(lines[i],lines[j]))){seen.add(i);changed=true}}return seen.has(b);}
 const sample=[{id:'dad',name:'爸爸',fatherId:'grandpa'},{id:'mom',name:'妈妈'},{id:'me',name:'我',fatherId:'dad',motherId:'mom'},{id:'sis',name:'姐姐',fatherId:'dad',motherId:'mom'},{id:'grandpa',name:'爷爷',dead:true}];
