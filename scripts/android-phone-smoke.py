@@ -73,12 +73,21 @@ def main():
         tap('家族树', '03-home')
         wait_for('亲戚怎么称呼', '04-tree', scroll=True)
         tap('设置家庭分支可见范围', '04-tree', scroll=True)
-        wait_for('允许关联家庭查看', '05-branch-settings')
+        switch = wait_for('允许关联家庭查看', '05-branch-settings')
+        assert switch.attrib.get('checked') == 'true', 'Branch preference must default on'
+        adb('shell', 'input', 'tap', *center(switch))
+        tap('保存家庭分支设置', '05-branch-off')
+        wait_for('已保存', '05-branch-saved')
         adb('shell', 'am', 'force-stop', PACKAGE)
         adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
-        wait_for('开始使用', '06-relaunch')
+        tap('开始使用', '06-relaunch')
+        tap('先看看已有的家庭', '07-family-entry')
+        tap('家族树', '08-home')
+        tap('设置家庭分支可见范围', '09-tree', scroll=True)
+        switch = wait_for('允许关联家庭查看', '10-persisted-branch')
+        assert switch.attrib.get('checked') == 'false', 'Closed branch preference lost after restart'
         assert adb('shell', 'pidof', PACKAGE).strip(), 'App process missing'
-        print('PASS installed APK: welcome, family entry, home, tree, branch settings, relaunch')
+        print('PASS installed APK: welcome, family entry, home, tree, default-on branch, saved off preference survives relaunch')
     finally:
         logs = adb('logcat', '-d')
         (OUT / 'startup.log').write_bytes(logs)
