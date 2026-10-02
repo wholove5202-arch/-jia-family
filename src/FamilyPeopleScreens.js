@@ -11,7 +11,7 @@ import {pickAvatarAsset,persistAvatarAsset} from './avatarPicker';
 import {HonorsScreen,TimelineScreen} from './ProfileMemoryScreens';
 import {MediaPreview} from './JournalScreens';
 import JiaIcon from './JiaIcon';
-import {layoutFamily} from './treeLayout';
+import {layoutFamily,familyTreeMembers} from './treeLayout';
 import {currentSpouseIds,availableRelativeOptions,completeCoupleParents,defaultParentSide,mayEditPerson,treeRows,validateParents,validateBirthday} from './familyEditing';
 
 const C=theme;
@@ -24,7 +24,7 @@ function Editor({children}){return <KeyboardAvoidingView style={s.root} behavior
 
 export function FamilyTreeScreen({family,onPerson,focusId='me',onBack,onSwitchFamily,onDelete,families=[],onSelectFamily,onBranchSettings}){
  const [mode,setMode]=useState('three'),[viewport,setViewport]=useState({w:340,h:480}),[zoom,setZoom]=useState(1),[offset,setOffset]=useState({x:0,y:0}),[searchOpen,setSearchOpen]=useState(false),[query,setQuery]=useState('');
- const members=family.members||[],layout=layoutFamily(members,mode==='full');
+ const members=family.members||[],treeMembers=familyTreeMembers(members,focusId),layout=layoutFamily(treeMembers,mode==='full');
  const fit=Math.min(1.1,(viewport.w-24)/layout.width,(viewport.h-24)/layout.height),scale=fit*(mode==='full'?zoom:1);
  const live=useRef({zoom,offset,mode});live.current={zoom,offset,mode};const gesture=useRef({});
  const responder=useRef(PanResponder.create({onStartShouldSetPanResponder:()=>false,onMoveShouldSetPanResponder:(_,g)=>live.current.mode==='full'&&(Math.abs(g.dx)+Math.abs(g.dy)>8||g.numberActiveTouches>1),onPanResponderGrant:e=>{if(live.current.mode!=='full')return;const t=e.nativeEvent.touches;gesture.current={...live.current,distance:t.length>1?Math.hypot(t[0].pageX-t[1].pageX,t[0].pageY-t[1].pageY):0};},onPanResponderMove:(e,g)=>{if(live.current.mode!=='full')return;const t=e.nativeEvent.touches;if(t.length>1){const d=Math.hypot(t[0].pageX-t[1].pageX,t[0].pageY-t[1].pageY);if(!gesture.current.distance)gesture.current.distance=d;setZoom(Math.max(.6,Math.min(5,gesture.current.zoom*d/gesture.current.distance)));}else setOffset({x:gesture.current.offset.x+g.dx,y:gesture.current.offset.y+g.dy});}})).current;
@@ -82,7 +82,7 @@ export function FamilyTreeScreen({family,onPerson,focusId='me',onBack,onSwitchFa
  const chooseFamily=async id=>{if(id===family.id||switching)return;setSwitching(true);setSwitchError('');try{await onSelectFamily?.(id);setQuery('');setSearchOpen(false);reset();}catch(e){setSwitchError('切换失败，请再试一次');}finally{setSwitching(false);}};
  const showingList=mode==='list'||query.trim().length>0;
  const listed=layoutFamily(members,true).rows.flat().filter(p=>!query.trim()||(p.name||'').includes(query.trim())||(p.relation||'').includes(query.trim()));
- const treeView=<View testID="family-tree-viewport" style={[s.treeViewport,mode==='three'&&{flex:0,flexShrink:0,minHeight:390,height:390,marginBottom:12}]} onLayout={e=>setViewport({w:e.nativeEvent.layout.width,h:e.nativeEvent.layout.height})} {...(mode==='full'?responder.panHandlers:{})}>
+ const treeView=<View testID="family-tree-viewport" style={[s.treeViewport,{flex:0,flexShrink:0,minHeight:390,height:390,marginBottom:12}]} onLayout={e=>setViewport({w:e.nativeEvent.layout.width,h:e.nativeEvent.layout.height})} {...(mode==='full'?responder.panHandlers:{})}>
  <View testID="family-tree-canvas" style={{position:'absolute',left:(viewport.w-layout.width)/2,top:(viewport.h-layout.height)/2,width:layout.width,height:layout.height,transform:[{translateX:mode==='full'?offset.x:0},{translateY:mode==='full'?offset.y:0},{scale}]}}>{renderedEdges}{layout.rows.flat().map(p=>{const pos=layout.positions[p.id];return <TouchableOpacity key={p.id} accessibilityRole="button" accessibilityLabel={'查看'+p.name} onPress={()=>onPerson(p)} style={[s.treePerson,{left:pos.x-52,top:pos.y}]}><View style={[s.treeAvatarRing,p.id===focusId&&s.treeAvatarFocus]}><PersonAvatar person={p} size={64}/></View><Text numberOfLines={1} style={s.treePersonName}>{p.name}</Text>{p.dead?<Text style={s.treePersonState}>已故</Text>:null}</TouchableOpacity>})}</View>
  {!members.length?<View style={s.treeEmpty}><Text style={s.treeHeading}>这里是你的家族树</Text><Text style={s.treeSubtitle}>添加的家人会按关系显示在这里</Text></View>:null}
  {mode==='full'&&<View style={s.treeControls}>{[['−','缩小家族树',()=>setZoom(z=>Math.max(.6,z/1.25))],['居中','居中家族树',reset],['＋','放大家族树',()=>setZoom(z=>Math.min(5,z*1.25))]].map(([label,a11y,action])=><TouchableOpacity key={label} accessibilityRole="button" accessibilityLabel={a11y} onPress={action} style={s.treeControl}><Text style={[s.treeControlLabel,label==='居中'&&{fontSize:12}]}>{label}</Text></TouchableOpacity>)}</View>}</View>;
@@ -91,7 +91,7 @@ export function FamilyTreeScreen({family,onPerson,focusId='me',onBack,onSwitchFa
  {mode==='list'&&<View style={s.familyListTools}><Text style={s.treeSubtitle}>{members.length} 位家人</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={searchOpen?'关闭搜索':'搜索家人'} style={s.familySearchButton} onPress={()=>{setSearchOpen(v=>!v);setQuery('')}}><JiaIcon name="search" size={18} color="#438951"/><Text style={s.familySearchText}>{searchOpen?'收起':'搜索'}</Text></TouchableOpacity></View>}
  {mode==='list'&&searchOpen?<TextInput accessibilityLabel="搜索家人姓名或称呼" placeholder="搜索姓名或称呼" placeholderTextColor="#938B79" style={s.treeSearch} value={query} onChangeText={setQuery}/>:null}
  <Text style={s.treeHint}>{query.trim()?'找到 '+listed.length+' 位家人':mode==='three'?'从最晚一代向上显示三代':mode==='list'?'从长辈到晚辈，查看全部亲人':'点头像查看资料，双指缩放或拖动查看'}</Text>
- {showingList?<ScrollView contentContainerStyle={s.treeList}>{listed.length?listed.map(p=><FamilyMemberRow key={p.id} person={p} members={members} onPress={()=>onPerson(p)} onDelete={p.id!=='me'&&mayEditPerson(p)?onDelete:undefined}/>):<Text style={s.treeHint}>没有找到这位家人</Text>}</ScrollView>:(mode==='three'?<ScrollView style={{flex:1}}>{treeView}<FamilyTreeExtras key={family.id} family={family} onSettings={onBranchSettings}/></ScrollView>:treeView)}</View>;
+ {showingList?<ScrollView contentContainerStyle={s.treeList}>{listed.length?listed.map(p=><FamilyMemberRow key={p.id} person={p} members={members} onPress={()=>onPerson(p)} onDelete={p.id!=='me'&&mayEditPerson(p)?onDelete:undefined}/>):<Text style={s.treeHint}>没有找到这位家人</Text>}</ScrollView>:<ScrollView style={{flex:1}}>{treeView}<FamilyTreeExtras key={family.id} family={family} onSettings={onBranchSettings}/></ScrollView>}</View>;
 
 }
 

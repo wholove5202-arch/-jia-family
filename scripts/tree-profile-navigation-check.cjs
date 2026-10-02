@@ -12,3 +12,7 @@ let tree=flat(render()).find(e=>e.type===screens.FamilyTreeScreen);assert(tree,'
 const personContainer=flat(render()).find(e=>e.type?.name==='Person');assert(personContainer,'Avatar action should open person route');const profile=personContainer.type();assert.equal(profile.type,screens.PersonProfileScreen);rootMode=false;
 const shown=flat(screens.PersonProfileScreen(profile.props));assert(shown.some(e=>e.children.includes('基本信息')),'Person basic information must render after opening from tree');assert.equal(profile.props.family.id,family.id);
 console.log('PASS real tree onPerson handler opens profile with family data and renders basic information');
+profile.props.onRelation(me);
+const relativeContainer=flat(render()).find(e=>e.type?.name==='Person');
+assert(relativeContainer,'tapping a relative must open their profile, not the relation editor');
+assert.equal(relativeContainer.type().props.person.id,'me');

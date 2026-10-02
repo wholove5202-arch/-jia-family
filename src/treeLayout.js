@@ -1,3 +1,31 @@
+// Expand the focal family's ancestry and descendants, then include their
+// partners as leaves. Never recurse upward through an added partner.
+export function familyTreeMembers(members,focusId='me'){
+ const byId=new Map(members.map(p=>[p.id,p]));
+ const focus=byId.get(focusId)||members.find(p=>p.relation==='本人')||members[0];
+ if(!focus)return [];
+ const ancestors=new Set(),visitParents=id=>{
+  if(!byId.has(id)||ancestors.has(id))return;
+  ancestors.add(id);const p=byId.get(id);
+  for(const pid of [p.fatherId,p.motherId])visitParents(pid);
+ };
+ visitParents(focus.id);
+ const blood=new Set(),queue=[...ancestors];
+ for(let i=0;i<queue.length;i++){
+  const id=queue[i];if(!byId.has(id)||blood.has(id))continue;blood.add(id);
+  const p=byId.get(id);
+  queue.push(...(p.siblingLinks||[]).map(l=>l.personId));
+  for(const q of members)if(q.fatherId===id||q.motherId===id||(q.siblingLinks||[]).some(l=>l.personId===id))queue.push(q.id);
+ }
+ const visible=new Set(blood);
+ for(const p of members){
+  if(blood.has(p.id)){
+   for(const id of [...(p.spouseIds||[]),p.fatherId,p.motherId])if(byId.has(id))visible.add(id);
+  }else if((p.spouseIds||[]).some(id=>blood.has(id)))visible.add(p.id);
+ }
+ return members.filter(p=>visible.has(p.id));
+}
+
 // Generations come from parent links; current spouses share a generation.
 export function layoutFamily(members,all=false){
  const ids=new Set(members.map(p=>p.id)),parent=new Map(members.map(p=>[p.id,p.id]));

@@ -58,9 +58,33 @@ for(const list of [inlaws.slice().reverse(),[...inlaws,{id:'wg',name:'妻子的�
 lines=segments(inlaws);
 const own=lines.filter(e=>/^(trunk|branch|child):dad:mom(?=:|$)/.test(e.key));
 const spouseParents=lines.filter(e=>/^(trunk|branch|child):fil:mil(?=:|$)/.test(e.key));
-assert(own.length&&spouseParents.length);
+assert(own.length);
+assert.equal(spouseParents.length,0,'spouse ancestry is kept out of the main family tree');
 assert(!own.some(a=>spouseParents.some(b=>touch(a,b))),'independent parent branches must not visually join');
 const small=inlaws.filter(q=>!['husband','son','son2','niece'].includes(q.id));
 const smallLines=segments(small),smallOwn=smallLines.filter(e=>/^(trunk|branch|child):dad:mom(?=:|$)/.test(e.key)),smallInlaws=smallLines.filter(e=>/^(trunk|branch|child):fil:mil(?=:|$)/.test(e.key));
 assert(!smallOwn.some(a=>smallInlaws.some(b=>touch(a,b))),'a parent midpoint aligned with an unrelated child must not share a vertical line');
 console.log('PASS spouse-parent generations, late-added adjacent couples, three-generation visibility and separate rendered lineages');
+
+// Main-family tree retains spouses and children but does not expand their
+// separate families; these people must remain in the stored member collection.
+const mainNodes=flatten(screenModule.FamilyTreeScreen({family:{name:'测试家庭',members:inlaws}}));
+const mainLabels=mainNodes.map(n=>n.props.accessibilityLabel).filter(Boolean);
+assert(!mainLabels.includes('查看岳父'),'main tree must not expand wife parents');
+assert(!mainLabels.includes('查看岳母'));
+assert(mainLabels.includes('查看刘璐'),'wife remains visible');
+assert(mainLabels.includes('查看张希伟'),'sister spouse remains visible');
+assert(mainLabels.includes('查看刘子淮')&&mainLabels.includes('查看张亲然'),'own and sister children remain visible');
+assert.equal(JSON.stringify(inlaws),before);
+const linked=[...inlaws,{id:'hf',name:'姐夫的父亲'},{id:'hm',name:'姐夫的母亲'}].map(q=>q.id==='husband'?{...q,fatherId:'hf',motherId:'hm'}:q);
+const narrowed=layoutModule.familyTreeMembers(linked,'me');
+assert(!narrowed.some(q=>['fil','mil','hf','hm'].includes(q.id)),'both partner families stay outside the main tree');
+const wifeView=layoutModule.familyTreeMembers(linked,'wife');
+assert(wifeView.some(q=>q.id==='fil')&&wifeView.some(q=>q.id==='mil'),'a different focal family has its own ancestors');
+assert(!wifeView.some(q=>q.id==='gp'),'do not expand back through spouse to their ancestors');
+const fullScreen=moduleAt(root+'/src/FamilyPeopleScreens.js',{'react':{...react,useState:x=>[x==='three'?'full':x,()=>{}]},'react-native':native,'./treeLayout':layoutModule,'./FamilyTreeExtras':{FamilyTreeExtras:function FamilyTreeExtras(){return null;}}});
+const fullNodes=flatten(fullScreen.FamilyTreeScreen({family:{name:'测试家庭',members:linked}}));
+assert(fullNodes.some(n=>n.props.accessibilityLabel==='查看爷爷'));
+assert(!fullNodes.some(n=>n.props.accessibilityLabel==='查看岳父'||n.props.accessibilityLabel==='查看姐夫的父亲'));
+assert(fullNodes.some(n=>n.type?.name==='FamilyTreeExtras'),'family branches remain below the full tree');
+console.log('PASS simplified main tree keeps spouses/children, hides both in-law families without deleting data, and retains branch access');
