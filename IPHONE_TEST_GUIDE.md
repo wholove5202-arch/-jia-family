@@ -8,6 +8,10 @@
 - iPhone 原生 Release 工程已完成编译，内置 `main.jsbundle`，无需开发服务器即可在 iPhone 模拟器启动。
 - 已检查欢迎页截图与进程记录。首次成功运行：<https://github.com/wholove5202-arch/-jia-family/actions/runs/36967310193>。
 - Android 实际安装及欢迎页、家庭入口、首页、家族树、分支设置、重新启动测试通过：<https://github.com/wholove5202-arch/-jia-family/actions/runs/36968777090>。
+- 最新 iPhone 原生编译与启动通过：<https://github.com/wholove5202-arch/-jia-family/actions/runs/36970597356>。
+- 最新 Android 安装包通过默认开启、关闭开关、保存、退出、重新进入家庭和设置页、开关保持关闭的完整操作验证：<https://github.com/wholove5202-arch/-jia-family/actions/runs/36971232956>。安装包来源构建：`36970703732`，版本：`b19ee7ac13ccb673b00b5441171d4de395fd1f0f`。
+- 原生测试发现分支设置显示“已保存”时，`accessibilityRole="status"` 会使 Android 崩溃；已改用原生支持的实时提示属性。同一套保存和重启测试由失败转为通过。
+- 下载包仅在实际页面操作及保存重启验证通过后发布，不再以 APK 编译成功代替功能通过。
 
 ## 当前边界
 模拟器运行成功不能替代 iPhone 真机测试，也不是可安装到用户手机的 IPA。本次尚未交付真机签名安装包。
@@ -26,4 +30,5 @@
 - 原生 iPhone 检查：`.github/workflows/ios-smoke.yml`。
 - Android 实际页面操作：`scripts/android-phone-smoke.py`，保留截图、UI XML、启动日志及来源构建编号。
 - Android 测试包：<https://github.com/wholove5202-arch/-jia-family/releases/tag/android-test>。
-- Android 系统栏安全间距修复：提交 `1ae27c37fda8a3c00ebfda24bda325c912e44d3b`。必须检查该提交构建后的截图，再宣称视觉问题已验证解决。
+- Android 系统栏安全间距修复：提交 `1ae27c37fda8a3c00ebfda24bda325c912e44d3b`，已检查新包首页和设置页截图，标题与底部按钮避开状态栏和手势条。
+- 原生资料保存在当前设备，网页版资料尚不会自动同步到手机安装版。
