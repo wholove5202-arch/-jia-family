@@ -9,6 +9,7 @@ async function main(){
  const son={id:'son',name:'刘子淮',fatherId:'me'};
  const get=(list,id='son')=>list.find(p=>p.id===id);
  let count=0;const check=(label,fn)=>{fn();count++;console.log('PASS '+label)};
+ check('partner family addition disabled',()=>{const list=couple();assert.deepEqual(availableRelativeOptions(list[1],list).map(o=>o[0]),['son','daughter']);for(const rel of ['father','mother','brother','sister'])assert.throws(()=>addRelative(list,'wife',rel,{id:'outside',name:'姻亲'}),/家庭分支/);assert(!list.some(p=>p.id==='outside'));});
  check('child before spouse',()=>{const list=addRelative([{id:'me',name:'我'},son],'me','spouse',{id:'wife',name:'刘璐'});assert.equal(get(list).motherId,'wife')});
  check('child after spouse',()=>assert.equal(get(addRelative(couple(),'me','son',{id:'son',name:'刘子淮'})).motherId,'wife'));
  check('maternal anchor',()=>{const child=get(addRelative(couple(),'wife','son',{id:'son',name:'刘子淮'},{parentSide:'mother'}));assert.equal(child.motherId,'wife');assert.equal(child.fatherId,'me')});

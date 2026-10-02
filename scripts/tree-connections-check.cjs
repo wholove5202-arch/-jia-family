@@ -36,8 +36,8 @@ inlaws=editing.addRelative(inlaws,'me','son',{id:'son',name:'刘子淮'});
 inlaws=editing.addRelative(inlaws,'me','son',{id:'son2',name:'刘子优'});
 inlaws=editing.addRelative(inlaws,'sis','spouse',{id:'husband',name:'张希伟'});
 inlaws=editing.addRelative(inlaws,'sis','daughter',{id:'niece',name:'张亲然'},{parentSide:'mother'});
-inlaws=editing.addRelative(inlaws,'wife','father',{id:'fil',name:'岳父'});
-inlaws=editing.addRelative(inlaws,'wife','mother',{id:'mil',name:'岳母'});
+// Historical records remain readable after partner-family additions are disabled.
+inlaws=[...inlaws.map(q=>q.id==='wife'?{...q,fatherId:'fil',motherId:'mil'}:q),{id:'fil',name:'岳父'},{id:'mil',name:'岳母'}];
 const before=JSON.stringify(inlaws),full=layoutModule.layoutFamily(inlaws,true),p=full.positions;
 assert.equal(p.fil.y,p.dad.y,'wife parents must share the parents generation despite missing grandparents');
 assert.equal(p.mil.y,p.mom.y);

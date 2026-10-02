@@ -50,12 +50,28 @@ export function currentSpouseIds(person){
  const ended=new Set((person?.marriages||[]).filter(m=>['divorced','widowed'].includes(m.status)).map(m=>m.personId));
  return [...new Set([...(person?.spouseIds||[]),...(person?.marriages||[]).filter(m=>m.status==='married').map(m=>m.personId)])].filter(id=>id&&!ended.has(id));
 }
-export function availableRelativeOptions(person){
+function mainFamilyIds(members){
+ const byId=new Map(members.map(p=>[p.id,p])),root=byId.get('me')||members.find(p=>p.relation==='本人')||members[0],ancestors=new Set();
+ const up=id=>{if(!byId.has(id)||ancestors.has(id))return;ancestors.add(id);const p=byId.get(id);up(p.fatherId);up(p.motherId);};
+ if(root)up(root.id);
+ const core=new Set(),queue=[...ancestors];
+ for(let i=0;i<queue.length;i++){const id=queue[i];if(!byId.has(id)||core.has(id))continue;core.add(id);const p=byId.get(id);queue.push(...(p.siblingLinks||[]).map(l=>l.personId));for(const q of members)if(q.fatherId===id||q.motherId===id||(q.siblingLinks||[]).some(l=>l.personId===id))queue.push(q.id);}
+ return core;
+}
+export function availableRelativeOptions(person,members){
+ if(members){
+  const core=mainFamilyIds(members);
+  if(!core.has(person?.id)){
+   const partner=(person?.spouseIds||[]).some(id=>core.has(id))||members.some(p=>core.has(p.id)&&((p.spouseIds||[]).includes(person?.id)||p.fatherId===person?.id||p.motherId===person?.id));
+   return partner?[['son','儿子'],['daughter','女儿']]:[];
+  }
+ }
  return [...(!person?.fatherId?[['father','父亲']]:[]),...(!person?.motherId?[['mother','母亲']]:[]),...(!currentSpouseIds(person).length?[['spouse','配偶']]:[]),['son','儿子'],['daughter','女儿'],['brother','兄弟'],['sister','姐妹']];
 }
 export function addRelative(members,anchorId,relation,record,{half=false,parentSide='father',priorStatus='divorced'}={}){
  const anchor=members.find(p=>p.id===anchorId);
  if(!anchor)throw new Error('请先选择要添加关系的家人');
+ if(!mainFamilyIds(members).has(anchorId)&&!availableRelativeOptions(anchor,members).some(([key])=>key===relation))throw new Error('配偶一方的亲属请通过家庭分支关联，不在本家庭代加');
  if(!record?.id||!record.name?.trim())throw new Error('请填写姓名');
  if(record.id===anchorId)throw new Error('不能给自己添加与自己的关系');
  let next=members.map(p=>({...p}));

@@ -28,7 +28,8 @@ async function main(){
  assert(!optionNodes.some(n=>n.type==='TouchableOpacity'&&['父亲','母亲','配偶','续配 / 再婚'].includes(text(n))));
  assert(text(optionNodes).includes('我和刘璐的儿子'));assert(text(optionNodes).includes('父亲：爸爸'));assert(text(optionNodes).includes('母亲：妈妈'));
  console.log('PASS occupied relation choices hidden and initial selection remains valid');
- console.log('PASS maternal anchor, daughter gender and save failure preserves draft');
+ assert(!nodes.some(n=>n.type==='TouchableOpacity'&&['父亲','母亲','兄弟','姐妹'].includes(text(n))),'partner add screen must hide their outside family relations');
+ console.log('PASS maternal anchor, daughter gender, partner-family choices disabled and save failure preserves draft');
  const hp=hooks(),rp={...hp,createElement};const profile=moduleAt('src/FamilyPeopleScreens.js',rp,{'./familyEditing':domain,'./JiaIcon':()=>null});
  let deletes=0;const person={id:'child',name:'测试孩子',claimed:false};const profileProps={person,members:[...members,person],family:{members:[...members,person]},onDelete:async()=>{deletes++;throw Error('删除写入失败')}};
  const renderProfile=()=>{hp.reset();return flatten(profile.PersonProfileScreen(profileProps))};

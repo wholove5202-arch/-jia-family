@@ -3,7 +3,7 @@ const root=process.cwd();function load(path,mocks){const result={};const code=ba
 let rootMode=true,index=0,slots=[];
 const react={createElement:(type,props,...children)=>({type,props:props||{},children}),useState(initial){if(!rootMode)return[initial,()=>{}];const i=index++;if(!(i in slots))slots[i]=initial==='welcome'?'tree':initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v]},useRef:x=>({current:x==='welcome'?'tree':x}),useMemo:fn=>fn(),useEffect:()=>{}};
 const native={View:'View',Text:'Text',TouchableOpacity:'TouchableOpacity',Image:'Image',ScrollView:'ScrollView',SafeAreaView:'SafeAreaView',StyleSheet:{create:x=>x},Platform:{OS:'web'},PanResponder:{create:()=>({panHandlers:{}})}};
-const screens=load('src/FamilyPeopleScreens.js',{'react':react,'react-native':native,'./familyEditing':{mayEditPerson:()=>true}});
+const screens=load('src/FamilyPeopleScreens.js',{'react':react,'react-native':native,'./familyEditing':load('src/familyEditing.js',{})});
 const dad={id:'dad',name:'爸爸'},me={id:'me',name:'我',fatherId:'dad'},family={id:'f',name:'测试家庭',members:[dad,me],media:[],notes:[]};
 const app=load('src/IntegratedPhase1App.js',{'react':react,'react-native':native,'./FamilyPeopleScreens':screens,'./useSeparatedPersistence':{useSeparatedPersistence:()=>({pub:{families:[family],activeFamilyId:'f'},priv:{},setPub:()=>{},ready:true})},'./Phase1StateModel':{publicPersonAvatar:()=>null,assertPrivateIsolation:()=>{}}});
 function flat(x){return Array.isArray(x)?x.flatMap(flat):x&&typeof x==='object'?[x,...flat(x.children||[])]:[];}
