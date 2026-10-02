@@ -57,8 +57,14 @@ export function FamilyTreeScreen({family,onPerson,focusId='me',onBack,onSwitchFa
   const bandTop=parentY+122;
   const branchY=bandTop+Math.max(0,childTop-bandTop-12)*(lane.indexOf(key)+1)/(lane.length+1);
   if(childTop>sourceY){
-   edges.push(line('trunk:'+key,sourceX,sourceY,1.5,branchY-sourceY));
-   const minX=Math.min(sourceX,...kids.map(k=>k.x)),maxX=Math.max(sourceX,...kids.map(k=>k.x));
+   const elbowY=parentY+118;
+   // Keep the attachment at the couple midpoint; below their labels shift
+   // the trunk away from the avatar columns to prevent collinear false links.
+   const routeX=sourceX+8;
+   edges.push(line('trunk:'+key,sourceX,sourceY,1.5,elbowY-sourceY));
+   edges.push(line('branch:'+key+':1',sourceX,elbowY,routeX-sourceX,1.5));
+   edges.push(line('trunk:'+key+':1',routeX,elbowY,1.5,branchY-elbowY));
+   const minX=Math.min(routeX,...kids.map(k=>k.x)),maxX=Math.max(routeX,...kids.map(k=>k.x));
    if(maxX>minX)edges.push(line('branch:'+key,minX,branchY,maxX-minX,1.5));
    for(let n=0;n<kids.length;n++)edges.push(line('child:'+key+':'+n,kids[n].x,branchY,1.5,childTop-branchY));
   }

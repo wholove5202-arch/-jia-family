@@ -60,4 +60,7 @@ const own=lines.filter(e=>/^(trunk|branch|child):dad:mom(?=:|$)/.test(e.key));
 const spouseParents=lines.filter(e=>/^(trunk|branch|child):fil:mil(?=:|$)/.test(e.key));
 assert(own.length&&spouseParents.length);
 assert(!own.some(a=>spouseParents.some(b=>touch(a,b))),'independent parent branches must not visually join');
+const small=inlaws.filter(q=>!['husband','son','son2','niece'].includes(q.id));
+const smallLines=segments(small),smallOwn=smallLines.filter(e=>/^(trunk|branch|child):dad:mom(?=:|$)/.test(e.key)),smallInlaws=smallLines.filter(e=>/^(trunk|branch|child):fil:mil(?=:|$)/.test(e.key));
+assert(!smallOwn.some(a=>smallInlaws.some(b=>touch(a,b))),'a parent midpoint aligned with an unrelated child must not share a vertical line');
 console.log('PASS spouse-parent generations, late-added adjacent couples, three-generation visibility and separate rendered lineages');
