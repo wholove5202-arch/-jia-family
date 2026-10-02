@@ -16,6 +16,14 @@ export function useSeparatedPersistence(defaultPublic,defaultPrivate){
  const priv=privState;
  const loaded=useRef(false),queue=useRef(Promise.resolve());
  const enqueue=work=>{const task=queue.current.then(work);queue.current=task.catch(()=>{});return task};
+ const savePrivate=updater=>enqueue(async()=>{
+  for(;;){
+   const baseline=privRef.current,next={...updater(baseline),aiAllowed:false},serialized=JSON.stringify(next);
+   await writePrivate(PRIV,serialized);lastWritten.current=serialized;
+   if(privRef.current!==baseline)continue;
+   setPriv(next);break;
+  }
+ });
  const saveFutureItem=item=>enqueue(async()=>{
   const next={...privRef.current,futureLetters:[item,...(privRef.current.futureLetters||[])],aiAllowed:false},serialized=JSON.stringify(next);
   await writePrivate(PRIV,serialized);lastWritten.current=serialized;setPriv(next);
@@ -32,7 +40,6 @@ export function useSeparatedPersistence(defaultPublic,defaultPrivate){
   }catch(e){setError(e.message);}finally{loaded.current=true;setReady(true)}
  })()},[]);
  useEffect(()=>{if(loaded.current&&!error){const task=publicQueue.current.then(async()=>{const serialized=JSON.stringify(pubRef.current);if(lastPublicWritten.current===serialized)return;await AsyncStorage.setItem(PUB,serialized);lastPublicWritten.current=serialized});publicQueue.current=task.catch(()=>{});task.catch(e=>setError(e.message))}},[pub]);
- useEffect(()=>{if(loaded.current&&!error){const serialized=JSON.stringify({...priv,aiAllowed:false});if(lastWritten.current!==serialized)enqueue(async()=>{if(lastWritten.current===serialized)return;await writePrivate(PRIV,serialized);lastWritten.current=serialized}).catch(e=>setError(e.message))}},[priv]);
- return {pub,setPub,savePublic,priv,setPriv,saveFutureItem,updateFutureItem,ready,error};
+ useEffect(()=>{if(loaded.current&&!error)enqueue(async()=>{const serialized=JSON.stringify({...privRef.current,aiAllowed:false});if(lastWritten.current===serialized)return;await writePrivate(PRIV,serialized);lastWritten.current=serialized}).catch(e=>setError(e.message))},[priv]);
+ return {pub,setPub,savePublic,priv,setPriv,savePrivate,saveFutureItem,updateFutureItem,ready,error};
 }
-

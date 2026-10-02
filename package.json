@@ -13,7 +13,7 @@
     "build:ios:preview": "eas build --platform ios --profile preview",
     "build:android:preview": "eas build --platform android --profile preview",
     "check:syntax": "node scripts/static-check.js",
-    "check:behavior": "node scripts/parents-check.cjs && node scripts/relative-flow-check.cjs && node scripts/tree-connections-check.cjs && node scripts/tree-profile-navigation-check.cjs && node scripts/tree-mode-check.cjs && node scripts/personal-generations-check.cjs && node scripts/reminder-scope-check.cjs && node scripts/branch-extras-check.cjs && node scripts/avatar-editor-check.cjs && node scripts/avatar-persistence-check.cjs && node scripts/album-persistence-check.cjs",
+    "check:behavior": "node scripts/parents-check.cjs && node scripts/relative-flow-check.cjs && node scripts/tree-connections-check.cjs && node scripts/tree-profile-navigation-check.cjs && node scripts/tree-mode-check.cjs && node scripts/personal-generations-check.cjs && node scripts/reminder-scope-check.cjs && node scripts/branch-extras-check.cjs && node scripts/avatar-editor-check.cjs && node scripts/avatar-persistence-check.cjs && node scripts/album-persistence-check.cjs && node scripts/life-interview-check.cjs && node scripts/interview-persistence-check.cjs && node scripts/interview-screen-check.cjs",
     "check:project": "npm run check:syntax && npx expo-doctor"
   },
   "dependencies": {
