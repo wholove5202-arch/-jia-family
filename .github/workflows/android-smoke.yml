@@ -11,7 +11,7 @@ on:
     types: [completed]
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -55,6 +55,18 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.jia.familymemory.test/.MainActivity
             python3 scripts/android-phone-smoke.py
+      - name: Publish verified test download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          SOURCE_RUN=$(cat phone-evidence/source-build.txt)
+          TESTED_SHA=$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)
+          if ! gh release view android-test >/dev/null 2>&1; then
+            gh release create android-test --target "$TESTED_SHA" --prerelease --title '家 · Android 手机测试版' --notes '手机测试包，已验证分支设置保存后重启。'
+          fi
+          gh release upload android-test phone-test/jia-family-test.apk phone-test/SHA256SUMS.txt --clobber
+          gh release edit android-test --prerelease --title '家 · Android 手机测试版' --notes "已验证 APK 签名、内置应用、页面导航和分支设置保存后重启。版本：$TESTED_SHA。用于手机测试，资料保存在当前设备。"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

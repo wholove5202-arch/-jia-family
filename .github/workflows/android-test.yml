@@ -13,7 +13,7 @@ on:
       - 'package*.json'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: jia-android-test
@@ -79,12 +79,3 @@ jobs:
           path: phone-test/*
           retention-days: 14
           if-no-files-found: error
-      - name: Publish verified test download
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if ! gh release view android-test >/dev/null 2>&1; then
-            gh release create android-test --target "$GITHUB_SHA" --prerelease --title '家 · Android 手机测试版' --notes '手机测试包，包含本地保存的测试功能。'
-          fi
-          gh release upload android-test phone-test/jia-family-test.apk phone-test/SHA256SUMS.txt --clobber
-          gh release edit android-test --prerelease --title '家 · Android 手机测试版' --notes "已验证 APK 签名及内置应用内容。版本：$GITHUB_SHA。用于手机测试，资料保存在当前设备。"
