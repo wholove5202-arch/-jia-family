@@ -1,6 +1,11 @@
 name: Android phone startup test
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-smoke.yml'
+      - 'scripts/android-phone-smoke.py'
   workflow_run:
     workflows: ['Android installable test app']
     types: [completed]
@@ -11,16 +16,26 @@ permissions:
 
 jobs:
   launch:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
       - name: Download the exact tested APK
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN: ${{ github.event.workflow_run.id }}
           GH_REPO: ${{ github.repository }}
-        run: gh run download "$SOURCE_RUN" --name jia-android-phone-test --dir phone-test
+        run: |
+          if [ -z "$SOURCE_RUN" ]; then
+            SOURCE_RUN=$(gh run list --workflow android-test.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          fi
+          test -n "$SOURCE_RUN"
+          mkdir -p phone-evidence
+          echo "$SOURCE_RUN" > phone-evidence/source-build.txt
+          gh run download "$SOURCE_RUN" --name jia-android-phone-test --dir phone-test
+          cd phone-test
+          sha256sum -c SHA256SUMS.txt
       - name: Enable Android acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -34,18 +49,12 @@ jobs:
           arch: x86_64
           profile: pixel_7_pro
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           script: |
             adb install phone-test/jia-family-test.apk
             adb logcat -c
             adb shell am start -W -n com.jia.familymemory.test/.MainActivity
-            sleep 15
-            adb shell pidof com.jia.familymemory.test
-            mkdir -p phone-evidence
-            adb logcat -d > phone-evidence/startup.log
-            adb shell uiautomator dump /sdcard/jia-ui.xml
-            adb pull /sdcard/jia-ui.xml phone-evidence/ui.xml
-            adb exec-out screencap -p > phone-evidence/startup.png
-            python -c "import pathlib; s=pathlib.Path('phone-evidence/startup.log').read_text(); assert 'FATAL EXCEPTION' not in s; assert 'Unable to load script' not in s; assert 'JavascriptException' not in s; ui=pathlib.Path('phone-evidence/ui.xml').read_text(); assert 'com.jia.familymemory.test' in ui"
+            python3 scripts/android-phone-smoke.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
