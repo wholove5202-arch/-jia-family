@@ -1,4 +1,5 @@
 name: iPhone Expo Go preview
+# Refresh the phone preview after the chat keyboard/navigation fix.
 
 on:
   workflow_dispatch:
