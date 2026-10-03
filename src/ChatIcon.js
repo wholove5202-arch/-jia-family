@@ -1,0 +1,22 @@
+import React from 'react';
+import {View} from 'react-native';
+import JiaIcon from './JiaIcon';
+export default function ChatIcon({name,size=26,color='#191919'}){
+ const line=(style,key)=><View key={key} style={[{position:'absolute',backgroundColor:color},style]}/>;
+ const k=size/28,shape=(style,key)=><View key={key} style={[{position:'absolute',backgroundColor:color},style]}/>;
+ if(['album','camera','location','letter','gift','switch','call'].includes(name)){
+  let parts=[];
+  if(name==='album')parts=[shape({left:2,top:4,width:24,height:20,borderRadius:1},'a'),shape({left:7,top:8,width:4,height:4,borderRadius:2,backgroundColor:'#FFFFFF'},'b'),shape({left:6,top:15,width:9,height:3,transform:[{rotate:'-40deg'}],backgroundColor:'#FFFFFF'},'c'),shape({left:12,top:16,width:10,height:3,transform:[{rotate:'40deg'}],backgroundColor:'#FFFFFF'},'d')];
+  if(name==='camera')parts=[shape({left:2,top:7,width:24,height:18,borderRadius:2},'a'),shape({left:8,top:3,width:12,height:6,borderRadius:2},'b'),shape({left:9,top:11,width:10,height:10,borderRadius:5,backgroundColor:'#FFFFFF'},'c')];
+  if(name==='location')parts=[shape({left:4,top:1,width:20,height:20,borderRadius:10},'a'),shape({left:8,top:13,width:12,height:12,transform:[{rotate:'45deg'}]},'b'),shape({left:10,top:7,width:8,height:8,borderRadius:4,backgroundColor:'#FFFFFF'},'c')];
+  if(name==='letter')parts=[shape({left:5,top:2,width:18,height:24,borderRadius:2},'a'),<View key="b" style={{position:'absolute',left:5,top:3,width:18,height:9,borderBottomWidth:1.5,borderColor:'#FFFFFF',borderBottomLeftRadius:10,borderBottomRightRadius:10}}/>,shape({left:12,top:10,width:4,height:4,borderRadius:2,backgroundColor:'#FFFFFF'},'c')];
+  if(name==='gift')parts=[shape({left:2,top:5,width:24,height:20,borderRadius:3},'a'),shape({left:13,top:8,width:2,height:17,backgroundColor:'#FFFFFF'},'b'),shape({left:2,top:14,width:24,height:1.5,backgroundColor:'#FFFFFF'},'c'),...[0,1].map(i=><View key={'d'+i} style={{position:'absolute',left:7+i*7,top:9,width:8,height:5,borderWidth:1.5,borderColor:'#FFFFFF',borderRadius:5,transform:[{rotate:i?'40deg':'-40deg'}]}}/>)];
+  if(name==='switch')parts=[shape({left:4,top:8,width:20,height:4},'a'),shape({left:4,top:17,width:20,height:4},'b'),shape({left:6,top:5,width:8,height:8,transform:[{rotate:'45deg'}]},'c'),shape({left:16,top:16,width:8,height:8,transform:[{rotate:'45deg'}]},'d')];
+  if(name==='call')parts=[<View key="a" style={{position:'absolute',left:3,top:4,width:18,height:21,borderLeftWidth:6,borderBottomWidth:6,borderColor:color,borderBottomLeftRadius:16,transform:[{rotate:'-25deg'}]}}/>,shape({left:3,top:2,width:6,height:10,borderRadius:2,transform:[{rotate:'-25deg'}]},'b'),shape({left:15,top:18,width:10,height:6,borderRadius:2,transform:[{rotate:'-25deg'}]},'c'),shape({left:16,top:3,width:8,height:6,borderRadius:1},'d')];
+  return <View style={{width:size,height:size}}><View style={{width:28,height:28,transform:[{scale:k}],transformOrigin:'top left'}}>{parts}</View></View>;
+ }
+ if(['plus','smile','voice'].includes(name))return <View style={{width:size,height:size,borderWidth:1.6,borderColor:color,borderRadius:size/2,alignItems:'center',justifyContent:'center'}}>{name==='plus'?<>{line({width:size*.58,height:1.6},'a')}{line({height:size*.58,width:1.6},'b')}</>:name==='smile'?<>{line({width:3,height:3,borderRadius:2,left:size*.25,top:size*.27},'a')}{line({width:3,height:3,borderRadius:2,right:size*.25,top:size*.27},'b')}<View style={{width:size*.55,height:size*.27,borderBottomWidth:1.8,borderLeftWidth:1.8,borderRightWidth:1.8,borderColor:color,borderBottomLeftRadius:12,borderBottomRightRadius:12,marginTop:7}}/></>:<>{[.24,.43,.64].map((v,i)=><View key={i} style={{position:'absolute',width:size*v/2,height:size*v,borderRightWidth:1.8,borderColor:color,borderRadius:size/2,left:size*(.25+i*.13)}}/>)}</>}</View>;
+ if(name==='dots')return <View style={{flexDirection:'row',gap:4}}>{[0,1,2].map(i=><View key={i} style={{width:3.5,height:3.5,borderRadius:3,backgroundColor:color}}/>)}</View>;
+ if(name==='mic')return <View style={{width:size,height:size,alignItems:'center'}}><View style={{width:10,height:18,backgroundColor:color,borderRadius:6}}/><View style={{position:'absolute',top:7,width:18,height:17,borderBottomWidth:2,borderLeftWidth:2,borderRightWidth:2,borderColor:color,borderRadius:10}}/>{line({width:2,height:6,bottom:0},'a')}</View>;
+ return <JiaIcon name={name} size={size} color={color}/>;
+}
