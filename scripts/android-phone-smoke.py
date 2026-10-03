@@ -71,6 +71,13 @@ def main():
     try:
         tap('开始使用', '01-welcome')
         tap('先看看已有的家庭', '02-family-entry')
+        wait_for('打开小家浮动窗口', '03-home')
+        home = snapshot('03-home')
+        robot = next(n for n in home.iter('node') if n.attrib.get('content-desc') == '打开小家浮动窗口')
+        tab = next(n for n in home.iter('node') if n.attrib.get('content-desc') == '我的')
+        robot_bottom = list(map(int, re.findall(r'\d+', robot.attrib['bounds'])))[3]
+        tab_top = list(map(int, re.findall(r'\d+', tab.attrib['bounds'])))[1]
+        assert robot_bottom <= tab_top, 'Home robot covers bottom navigation'
         tap('家族树', '03-home')
         wait_for('亲戚怎么称呼', '04-tree', scroll=True)
         tap('设置家庭分支可见范围', '04-tree', scroll=True)
@@ -87,8 +94,40 @@ def main():
         tap('设置家庭分支可见范围', '09-tree', scroll=True)
         switch = wait_for('允许关联家庭查看', '10-persisted-branch', checkable=True)
         assert switch.attrib.get('checked') == 'false', 'Closed branch preference lost after restart'
+        tap('家讯', '11-open-chat')
+        message = 'APP-SMOKE-' + str(int(time.time()))
+        tap('家庭群消息', '12-chat-input')
+        adb('shell', 'input', 'text', message)
+        tap('发送群消息', '13-chat-keyboard-send')
+        wait_for(message, '14-chat-sent')
+        adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+        root = snapshot('14-chat-keyboard-closed')
+        assert sum(n.attrib.get('text') == message for n in root.iter('node')) == 1, 'Sent chat message duplicated'
+        assert not any(n.attrib.get('content-desc') == '打开小家浮动窗口' for n in root.iter('node')), 'Robot overlay appears in family group'
+        tap('添加聊天照片或视频', '15-chat-attachments')
+        for label in ['选择聊天照片', '拍摄', '语音通话', '位置', '红包', '礼物', '转账', '语音输入']:
+            wait_for(label, '15-chat-attachments')
+        tap('转账', '16-chat-unavailable')
+        wait_for('转账暂未开放', '16-chat-unavailable')
+        tap('关闭功能提示', '16-chat-close-notice')
+        tap('查看群成员', '17-chat-info')
+        tap('备注', '18-chat-remark')
+        tap('备注输入', '18-chat-remark-input')
+        adb('shell', 'input', 'text', 'APP-SMOKE-NOTE')
+        adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+        tap('保存群设置', '19-chat-remark-save')
+        wait_for('APP-SMOKE-NOTE', '20-chat-remark-saved')
+        adb('shell', 'am', 'force-stop', PACKAGE)
+        adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
+        tap('开始使用', '21-chat-relaunch')
+        tap('先看看已有的家庭', '22-chat-family-entry')
+        tap('家讯', '23-chat-restored')
+        wait_for(message, '24-chat-message-persisted')
+        tap('查看群成员', '25-chat-info-restored')
+        wait_for('APP-SMOKE-NOTE', '26-chat-remark-persisted')
+        (OUT / 'chat-test-message.txt').write_text(message)
         assert adb('shell', 'pidof', PACKAGE).strip(), 'App process missing'
-        print('PASS installed APK: welcome, family entry, home, tree, default-on branch, saved off preference survives relaunch')
+        print('PASS installed APK: robot avoids navigation; branch, sent chat message and group remark survive relaunch; keyboard send, attachments and closed feature notice verified')
     finally:
         logs = adb('logcat', '-d')
         (OUT / 'startup.log').write_bytes(logs)
