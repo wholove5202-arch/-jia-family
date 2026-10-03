@@ -9,7 +9,16 @@ export default function XiaojiaChatScreen({family,onBack,bottomInset=0,compact=f
  const [compactAnswered,setCompactAnswered]=useState(false);
  const lock=useRef(false),scroller=useRef();
  const members=family?.members||[],relative=members.find(p=>p.id===selected)||members.find(p=>p.id!=='me')||members[0];
- const question=interviewQuestions.find(q=>!data.answered.includes(q.id)&&!data.skipped.includes(q.id));
+ const welcomeQuestions=[
+ {id:'welcome_childhood_play',text:'小时候，你更爱在家里玩，还是跑出去玩？',options:[['home','在家里玩'],['outside','跑出去玩']]},
+ {id:'welcome_home_memory',text:'想到小时候的家，你先想起的是一顿饭，还是一个人？',options:[['meal','一顿饭'],['person','一个人']]},
+ {id:'welcome_family_time',text:'如果今天能和家人多待一会儿，你更想一起吃饭，还是出去走走？',options:[['meal','一起吃饭'],['walk','出去走走']]},
+ {id:'welcome_family_talk',text:'一家人坐在一起，你更爱听过去的故事，还是聊现在的生活？',options:[['past','过去的故事'],['present','现在的生活']]},
+ {id:'welcome_care',text:'家人难过时，你更习惯陪在身边，还是开口安慰？',options:[['company','陪在身边'],['words','开口安慰']]},
+ {id:'welcome_decisions',text:'年轻时做决定，你更常听家人的建议，还是自己拿主意？',options:[['family','听家人的建议'],['self','自己拿主意']]}
+ ];
+ const activeQuestions=compact?welcomeQuestions:interviewQuestions;
+ const question=activeQuestions.find(q=>!data.answered.includes(q.id)&&!data.skipped.includes(q.id));
  useEffect(()=>{let active=true;AsyncStorage.getItem(key).then(raw=>{if(!active)return;if(raw){const p=JSON.parse(raw);if(Array.isArray(p.messages)&&Array.isArray(p.answered))setData({messages:p.messages.filter(m=>m&&typeof m.text==='string'&&typeof m.question==='string'),answered:p.answered.filter(x=>typeof x==='string'),skipped:Array.isArray(p.skipped)?p.skipped.filter(x=>typeof x==='string'):[]})}setLoaded(true)}).catch(()=>{if(active){setError('聊天记录读取失败，请退出后重试。')}});return()=>{active=false}},[]);
  async function persist(next){await AsyncStorage.setItem(key,JSON.stringify(next));setData(next)}
  async function send(text=draft){if(!text.trim()||lock.current||!loaded)return;lock.current=true;setBusy(true);setError('');try{if(mode==='self'){const next={...data,messages:[...data.messages,{id:Date.now(),question:question?.text||'今天有什么想聊的事？',questionId:question?.id||null,text:text.trim(),source:'self',createdAt:new Date().toISOString()}],answered:question?[...data.answered,question.id]:data.answered};await persist(next);setDraft('');if(compact)setCompactAnswered(true)}else{const p=relative;if(!p)throw Error('没有可查看的家人');let answer;if(/几|多少/.test(text)&&/人|口/.test(text))answer=`当前家庭空间登记了 ${members.length} 位家人：${members.map(x=>x.name).join('、')}。这是登记成员，并不代表现实中全部家庭人口。`;else if(/生日|出生/.test(text))answer=p.birthday?`${p.name}的资料中，生日是 ${p.birthday}。`:'这位家人的资料里还没有生日记录。';else answer=`目前可查看${p.name}的基本资料；尚未接通 AI，暂时不能分析这段经历。`;setQa(v=>[...v,{id:Date.now(),question:text.trim(),answer}]);setDraft('')}}catch{setError('未保存成功，输入仍保留，请重试。')}finally{lock.current=false;setBusy(false)}}
