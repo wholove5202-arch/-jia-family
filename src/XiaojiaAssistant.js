@@ -3,16 +3,16 @@ import {View,Text,TouchableOpacity,Modal,StyleSheet,PanResponder,useWindowDimens
 import XiaojiaArtwork from './XiaojiaArtwork';
 import XiaojiaChatScreen from './XiaojiaChatScreen';
 export default function XiaojiaAssistant({screen,onGo,family,shouldGreet,onGreetingShown}){
- const {width,height}=useWindowDimensions(),[open,setOpen]=useState(false),[hidden,setHidden]=useState(false),[welcome,setWelcome]=useState(false),[arrival,setArrival]=useState(false);
+ const {width,height}=useWindowDimensions(),[open,setOpen]=useState(false),[hidden,setHidden]=useState(false),[welcome,setWelcome]=useState(false);
  const bubbleAnimation=useRef(new Animated.Value(0)).current;
  const dimensions=useRef({width,height}),moved=useRef(false),origin=useRef({x:0,y:0});
- const [greetingHeight,setGreetingHeight]=useState(300);
- const [position,setPosition]=useState({x:width-72,y:height-180}),pos=useRef(position);
+ const [greetingHeight,setGreetingHeight]=useState(140);
+ const [position,setPosition]=useState({x:width-72,y:height-150}),pos=useRef(position);
  dimensions.current={width,height};
- const bound=(x,y)=>({x:Math.max(8,Math.min(dimensions.current.width-80,x)),y:Math.max(75,Math.min(dimensions.current.height-175,y))});
+ const bound=(x,y)=>({x:Math.max(8,Math.min(dimensions.current.width-80,x)),y:Math.max(75,Math.min(dimensions.current.height-150,y))});
  const move=p=>{pos.current=p;setPosition(p)};
  useEffect(()=>{move(bound(pos.current.x,pos.current.y))},[width,height]);
- useEffect(()=>{if(screen==='home'&&shouldGreet){setArrival(true);setWelcome(true);setOpen(true);onGreetingShown?.()}},[screen,shouldGreet]);
+ useEffect(()=>{if(screen==='home'&&shouldGreet){setWelcome(true);setOpen(true);onGreetingShown?.()}},[screen,shouldGreet]);
  useEffect(()=>{setHidden(false);if(screen!=='home'){setOpen(false);setWelcome(false)}},[screen]);
  useEffect(()=>{
   if(!open||!welcome)return;
@@ -20,13 +20,7 @@ export default function XiaojiaAssistant({screen,onGo,family,shouldGreet,onGreet
   const animation=Animated.spring(bubbleAnimation,{toValue:1,friction:7,tension:80,useNativeDriver:Platform.OS!=='web'});
   animation.start();
   return()=>animation.stop();
- },[open,welcome,arrival]);
- useEffect(()=>{
-  if(!open||!welcome||!arrival)return;
-  let fade;
-  const timer=setTimeout(()=>{fade=Animated.timing(bubbleAnimation,{toValue:0,duration:180,useNativeDriver:Platform.OS!=='web'});fade.start(({finished})=>{if(finished)setArrival(false)})},2200);
-  return()=>{clearTimeout(timer);fade?.stop()};
- },[open,welcome,arrival]);
+ },[open,welcome]);
  const close=()=>{setWelcome(false);setOpen(false)};
  const openChat=()=>{setWelcome(false);setOpen(true)};
  const start=()=>{origin.current=pos.current;moved.current=false};
@@ -39,7 +33,7 @@ export default function XiaojiaAssistant({screen,onGo,family,shouldGreet,onGreet
  {screen==='home'&&hidden&&<TouchableOpacity accessibilityRole="button" accessibilityLabel="显示小家" onPress={()=>setHidden(false)} style={s.restore}><Text style={s.link}>显示小家</Text></TouchableOpacity>}
  {!hidden&&<View style={[s.floating,{left:position.x,top:position.y}]}><View accessibilityRole="button" accessibilityLabel="打开小家浮动窗口" tabIndex={0} onKeyDown={e=>{if(e.nativeEvent.key==='Enter')openChat()}} style={[s.orb,Platform.OS==='web'&&{touchAction:'none',cursor:'grab',userSelect:'none'}]} {...(Platform.OS==='web'?webDrag:pan.panHandlers)}><XiaojiaArtwork width={65}/></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="隐藏小家" onPress={()=>{setHidden(true);close()}} style={s.hide}><Text style={s.link}>×</Text></TouchableOpacity></View>}
 
- {open&&welcome&&<Animated.View onLayout={e=>setGreetingHeight(e.nativeEvent.layout.height)} style={[s.greetingBubble,{opacity:bubbleAnimation,transform:[{scale:bubbleAnimation.interpolate({inputRange:[0,1],outputRange:[.88,1]})}],width:arrival?Math.min(220,width-24):Math.min(340,width-24),left:Math.max(12,Math.min(width-Math.min(arrival?220:340,width-24)-12,position.x<width/2?position.x:position.x-Math.min(arrival?220:340,width-24)+70)),top:Math.max(80,Math.min(height-greetingHeight-90,position.y-greetingHeight-12))}]}><>{arrival?<View style={s.arrivalBalloon}><Text style={{fontSize:21,fontWeight:"600",color:"#172236"}}>欢迎回家！</Text><View pointerEvents="none" style={[s.bubbleTail,position.x<width/2&&{right:undefined,left:30}]}/></View>:<XiaojiaChatScreen family={family} compact tailSide={position.x<width/2?"left":"right"} onBack={close}/>}</></Animated.View>}
+ {open&&welcome&&<Animated.View onLayout={e=>setGreetingHeight(e.nativeEvent.layout.height)} style={[s.greetingBubble,{opacity:bubbleAnimation,transform:[{scale:bubbleAnimation.interpolate({inputRange:[0,1],outputRange:[.88,1]})}],width:Math.min(236,width-24),left:Math.max(12,Math.min(width-Math.min(236,width-24)-12,position.x<width/2?position.x:position.x-Math.min(236,width-24)+70)),top:Math.max(80,Math.min(height-greetingHeight-80,position.y-greetingHeight-6))}]}><XiaojiaChatScreen family={family} compact tailSide={position.x<width/2?"left":"right"} onBack={close}/></Animated.View>}
  <Modal visible={open&&!welcome} transparent animationType="fade" onRequestClose={close}><View style={s.backdrop}><View accessibilityViewIsModal style={[s.window,{height:welcome?undefined:'80%'}]}><XiaojiaChatScreen family={family} compact={welcome} onBack={close}/>{!welcome&&<View style={{flexDirection:'row',padding:12,gap:12}}><TouchableOpacity onPress={()=>{close();onGo('lifeInterview')}}><Text style={s.link}>展开聊天</Text></TouchableOpacity><TouchableOpacity onPress={()=>{close();onGo('album')}}><Text style={s.link}>家庭相册</Text></TouchableOpacity></View>}</View></View></Modal>
  </>
 }
