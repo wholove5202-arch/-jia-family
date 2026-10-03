@@ -1,5 +1,5 @@
 name: iPhone Expo Go preview
-# Refresh the phone preview after the chat keyboard/navigation fix.
+# Refresh the phone preview after the conversation-space and composer-contrast fix.
 
 on:
   workflow_dispatch:
