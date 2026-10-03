@@ -30,7 +30,6 @@ import {endMarriage,removePerson,addRelative} from './familyEditing';
 import OldPhotoScanner from './OldPhotoScanner';
 import LifeInterviewScreen from './LifeInterviewScreen';
 import XiaojiaAssistant from './XiaojiaAssistant';
-import XiaojiaArtwork from './XiaojiaArtwork';
 import XiaojiaChatScreen from './XiaojiaChatScreen';
 import {updateInterview} from './lifeInterview';
 const privateScreens=new Set(['private','privateMedia','privateNotes','miss','legacy','life','voice','password','futureLetter']);
@@ -51,7 +50,6 @@ export default function IntegratedPhase1App(){
  const [treeFocusId,setTreeFocusId]=useState("me"),[relativeAnchor,setRelativeAnchor]=useState(null);
  const [screen,rawSetScreen]=useState("welcome"),[person,setPerson]=useState(null),[selectedMedia,setSelectedMedia]=useState(null),[deathCase,setDeathCase]=useState(null),[actingMemberId,setActingMemberId]=useState("me");
  const history=useRef([]),current=useRef('welcome'),[unlocked,setUnlocked]=useState(false),pending=useRef('private');
- const [homeCardWidth,setHomeCardWidth]=useState(350);
  const [homeFamilyOpen,setHomeFamilyOpen]=useState(false);
  const [uploadAssets,setUploadAssets]=useState([]);
 
@@ -106,13 +104,19 @@ export default function IntegratedPhase1App(){
  try{assertPrivateIsolation(priv)}catch(e){return <SafeAreaView style={s.loading}><Text>私密数据安全检查未通过，已停止加载。</Text></SafeAreaView>}
  if(!family)return <SafeAreaView style={s.loading}><Text style={s.heroT}>还没有家庭</Text><Action title="创建家庭" onPress={()=>createFamily("我们的家")}/></SafeAreaView>;
 
- const Home=()=> <ScrollView style={{backgroundColor:'#FFFFFF'}} contentContainerStyle={{padding:20,paddingBottom:110,maxWidth:600,width:'100%',alignSelf:'center'}}>
- <View style={s.homeBrandRow}><Text style={s.homeBrandTitle}>家</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="切换家庭" onPress={()=>setHomeFamilyOpen(true)} style={s.homeFamilySwitch}><Text style={s.homeFamilyName}>{family.name||'幸福家庭'} ▾</Text></TouchableOpacity></View>
- <View onLayout={e=>setHomeCardWidth(e.nativeEvent.layout.width)} style={{marginTop:12}}><XiaojiaArtwork kind="photo" width={homeCardWidth}/></View>
- <Text style={{fontSize:23,fontWeight:'700',color:'#172236',textAlign:'center',marginVertical:18}}>你的人生，值得被后人了解</Text>
- <TouchableOpacity accessibilityRole="button" accessibilityLabel="和小家聊聊人生" onPress={()=>setScreen('lifeInterview')} style={{backgroundColor:'#347EF0',borderRadius:28,padding:15,alignItems:'center',marginBottom:18}}><Text style={{fontSize:18,fontWeight:'600',color:'#FFFFFF'}}>和小家聊聊</Text></TouchableOpacity>
- <View style={{flexDirection:'row',flexWrap:'wrap',gap:12}}>{[['album','家庭相册','珍藏家人时光','album','#6C94F4'],['notes','添加一段记忆','记录生活点滴','memory','#EDA442'],['calendar','重要日子','不错过牵挂','days','#EE6672'],['chat','家讯公告','让家人知晓','chat','#347EF0']].map(([icon,title,sub,key,color])=><TouchableOpacity key={key} accessibilityRole="button" accessibilityLabel={title} onPress={()=>setScreen(key)} style={{width:'47%',borderWidth:1,borderColor:'#EDF0F4',borderRadius:18,padding:16,minHeight:135}}><View style={{width:46,height:46,borderRadius:13,backgroundColor:'#F1F6FF',alignItems:'center',justifyContent:'center'}}><JiaIcon name={icon} size={27} color={color}/></View><Text style={{fontSize:17,fontWeight:'600',color:C.deep,marginTop:10}}>{title}</Text><Text style={{fontSize:13,color:C.muted,marginTop:4}}>{sub}</Text></TouchableOpacity>)}</View>
- <View style={{flexDirection:'row',gap:18,marginTop:20}}>{[['家族树','tree'],['老照片修复','restore'],['AI回忆影片','film']].map(([title,key])=><TouchableOpacity key={key} onPress={()=>setScreen(key)}><Text style={{fontSize:14,color:C.brown}}>{title}</Text></TouchableOpacity>)}</View>
+ const Home=()=> <ScrollView style={{backgroundColor:'#FAF8F5'}} contentContainerStyle={[s.homePage,{backgroundColor:'transparent'}]}>
+  <View pointerEvents="none" style={{position:'absolute',top:0,bottom:0,left:0,right:0,...(Platform.OS==='web'?{backgroundImage:'radial-gradient(ellipse at 100% 0%, rgba(215,240,238,0.62) 0%, transparent 48%), radial-gradient(ellipse at 0% 40%, rgba(250,230,212,0.38) 0%, transparent 58%)'}:{backgroundColor:'#FAF8F5'})}}/>
+  <View style={s.homeBrandRow}><View style={s.homeBrandCopy}><Text style={s.homeBrandTitle}>家</Text><Text style={s.homeBrandTagline}>把家人的故事，留给未来</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="切换家庭" onPress={()=>setHomeFamilyOpen(true)} style={s.homeFamilySwitch}><Text numberOfLines={1} style={s.homeFamilyName}>{family.name||'幸福家庭'}</Text><Text style={s.homeFamilyChevron}>▾</Text></TouchableOpacity></View>
+  <FamilyCover family={family} onPress={()=>setScreen(family.media?.some(m=>m.type!=="video"&&!m.private&&m.uri)?"album":"add")}/>
+  <View style={s.featureRow}>
+   <TouchableOpacity style={[s.featureMain,{backgroundColor:"#F1F7FC"}]} onPress={()=>setScreen("album")}><View style={[s.mainFeatureIcon,{backgroundColor:"#FFE4B8"}]}><JiaIcon name="album" size={29} color="#F08A27"/></View><Text style={s.featureTitle}>家庭相册</Text><Text style={s.featureSub}>珍藏每一张照片</Text></TouchableOpacity>
+   <TouchableOpacity style={[s.featureMain,{backgroundColor:"#FFF0F1"}]} onPress={()=>setScreen("memory")}><View style={[s.mainFeatureIcon,{backgroundColor:"#FFDDE1"}]}><JiaIcon name="calendar" size={29} color="#E85D69"/></View><Text style={s.featureTitle}>添加一段记忆</Text><Text style={s.featureSub}>照片 · 视频 · 录音 · 文字  ›</Text></TouchableOpacity>
+  </View>
+  <View style={s.quickGrid}>{[["tree","家族树","梳理家族关系","tree","#EAF6E9","#158A49"],["calendar","重要日子","生日 · 纪念日","days","#EEE9FF","#6957D8"],["scan","老照片修复","让旧照重现光彩","restore","#F1F7FC","#F08320"],["film","AI回忆影片","让照片动起来","film","#E7F4FF","#2379D7"]].map(([icon,title,sub,key,color,accent])=><TouchableOpacity key={key} style={s.quickItem} onPress={()=>setScreen(key)}><View style={[s.quickIcon,{backgroundColor:color}]}><JiaIcon name={icon} size={26} color={accent}/></View><Text style={s.quickLabel}>{title}</Text><Text style={s.quickSub}>{sub}</Text></TouchableOpacity>)}</View>
+  <View style={s.sectionHead}><Text style={s.sectionTitle}>家庭动态</Text><TouchableOpacity onPress={()=>setScreen("album")}><Text style={s.sectionMore}>查看全部  ›</Text></TouchableOpacity></View>
+  {!family.media?.length&&!family.notes?.length?<View style={s.emptyFeed}><Text style={s.homeHint}>家人上传的照片和新增的记忆，会共享显示在这里。</Text></View>:null}
+  {(family.notes||[]).filter(n=>!n.private&&n.visibility!=="private").slice(0,3).map(n=><TouchableOpacity key={n.id} style={s.memoryCard} onPress={()=>setScreen("memory")}><View style={[s.memorySymbol,{backgroundColor:"#FFF0E6"}]}><JiaIcon name="notes" size={24} color="#378BCC"/></View><View style={{flex:1}}><Text style={s.memoryTitle}>{n.title||"一段家庭记忆"}</Text><Text numberOfLines={2} style={s.homeHint}>{n.text||"查看这段记忆"}</Text></View><Text style={s.sectionMore}>›</Text></TouchableOpacity>)}
+  {!!family.media?.length&&<TouchableOpacity style={s.memoryCard} onPress={()=>setScreen("album")}><View style={s.memorySymbol}><JiaIcon name="album" size={24} color="#378BCC"/></View><View style={{flex:1}}><Text style={s.memoryTitle}>家人上传了新的照片</Text><Text style={s.homeHint}>家庭相册现有 {family.media.length} 张照片和视频</Text></View><Text style={s.sectionMore}>›</Text></TouchableOpacity>}
  </ScrollView>;
  const Person=()=> <PersonProfileScreen person={person} family={family} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onDelete={deletePerson} onRelation={relative=>relative?.id?openPerson(relative):setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
 
