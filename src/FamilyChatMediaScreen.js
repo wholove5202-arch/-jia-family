@@ -1,33 +1,33 @@
-import {theme} from './theme';
-
-import React,{useState} from "react";
-import {View,Text,TextInput,TouchableOpacity,ScrollView,StyleSheet,Alert} from "react-native";
-import {pickImagesAndVideos} from "./mediaPicker";
-import {makeChatMediaMessage,decideChatArchive} from "./ChatMediaArchive";
-import {ChatArchiveCard} from "./Phase1CoreScreens";
-const C=theme;
-export default function FamilyChatMediaScreen({family,onPatch}){
- const [text,setText]=useState("");
- const sendText=()=>{if(!text.trim())return;onPatch({chat:[...(family.chat||[]),{id:`msg_${Date.now()}`,type:"text",senderId:"me",senderName:"我",text:text.trim(),createdAt:new Date().toISOString()}]});setText("")};
- const pick=async()=>{
-  const r=await pickImagesAndVideos(); if(r.permissionDenied){Alert.alert("需要照片权限");return}
-  if(!r.assets.length)return;
-  const assets=r.assets.map((a,i)=>({id:`chatmedia_${Date.now()}_${i}`,uri:a.uri,type:a.type||"image",createdAt:new Date().toISOString(),personIds:[],private:false,source:"family_chat"}));
-  const msg=makeChatMediaMessage("me","我",assets.map(x=>x.id));
-  onPatch({media:[...(family.media||[]),...assets.map(x=>({...x,albumArchived:false}))],chat:[...(family.chat||[]),msg]});
- };
- const decide=(id,yes)=>{
-  const chat=decideChatArchive(family.chat||[],id,yes);
-  const msg=chat.find(x=>x.id===id), set=new Set(msg?.mediaIds||[]);
-  const media=(family.media||[]).map(m=>set.has(m.id)?{...m,albumArchived:yes}:m);
-  onPatch({chat,media});
- };
- return <View style={s.page}><Text style={s.title}>{family.name} · 家庭群</Text><ScrollView style={{flex:1}}>
-  {(family.chat||[]).map(m=>m.type==="media"?<ChatArchiveCard key={m.id} message={m} onArchive={id=>decide(id,true)} onNoArchive={id=>decide(id,false)}/>:
-   <View key={m.id} style={s.bubble}><Text style={s.who}>{m.senderName}</Text><Text>{m.text}</Text></View>)}</ScrollView>
-  <View style={s.compose}><TouchableOpacity onPress={pick}><Text style={s.add}>＋</Text></TouchableOpacity><TextInput value={text} onChangeText={setText} style={s.input} placeholder="和家人说点什么…"/>
-   <TouchableOpacity onPress={sendText}><Text style={s.send}>发送</Text></TouchableOpacity></View>
- </View>
+import React,{useState,useRef} from 'react';
+import {View,Text,TextInput,TouchableOpacity,ScrollView,StyleSheet,Alert,Image,KeyboardAvoidingView,Platform} from 'react-native';
+import {pickImagesAndVideos} from './mediaPicker';
+import {makeChatMediaMessage,decideChatArchive} from './ChatMediaArchive';
+import {ChatArchiveCard} from './Phase1CoreScreens';
+import JiaIcon from './JiaIcon';
+export default function FamilyChatMediaScreen({family,onPatch,onBack}){
+ const [text,setText]=useState(''),[showMembers,setShowMembers]=useState(false),[picking,setPicking]=useState(false);
+ const list=useRef();
+ const messages=family.chat||[],members=family.members||[];
+ const sendText=()=>{if(!text.trim())return;onPatch({chat:[...messages,{id:`msg_${Date.now()}`,type:'text',senderId:'me',senderName:'我',text:text.trim(),createdAt:new Date().toISOString()}]});setText('')};
+ const pick=async()=>{if(picking)return;setPicking(true);try{
+  const r=await pickImagesAndVideos();if(r.permissionDenied){Alert.alert('需要照片权限');return}if(!r.assets.length)return;
+  const assets=r.assets.map((a,i)=>({id:`chatmedia_${Date.now()}_${i}`,uri:a.uri,type:a.type||'image',createdAt:new Date().toISOString(),personIds:[],private:false,source:'family_chat'}));
+  const msg=makeChatMediaMessage('me','我',assets.map(x=>x.id));
+  onPatch({media:[...(family.media||[]),...assets.map(x=>({...x,albumArchived:false}))],chat:[...messages,msg]});
+ }catch{Alert.alert('未能添加照片','请稍后重试。')}finally{setPicking(false)}};
+ const decide=(id,yes)=>{const chat=decideChatArchive(messages,id,yes),msg=chat.find(x=>x.id===id),ids=new Set(msg?.mediaIds||[]);onPatch({chat,media:(family.media||[]).map(m=>ids.has(m.id)?{...m,albumArchived:yes}:m)})};
+ const avatar=(person,label)=><View style={s.avatar}>{person?.avatarUri?<Image source={{uri:person.avatarUri}} style={s.avatarImage}/>:<Text style={s.avatarText}>{(label||'家').slice(0,1)}</Text>}</View>;
+ return <KeyboardAvoidingView style={s.page} behavior={Platform.OS==='ios'?'padding':undefined}>
+  <View style={s.header}><TouchableOpacity accessibilityRole="button" accessibilityLabel="返回首页" onPress={onBack} style={s.headerButton}><JiaIcon name="back" size={23} color="#202522"/></TouchableOpacity><View style={s.heading}><Text numberOfLines={1} style={s.title}>{family.name} ({members.length})</Text><Text style={s.status}>家庭群 · 本机测试</Text></View><TouchableOpacity accessibilityRole="button" accessibilityLabel="查看群成员" onPress={()=>setShowMembers(v=>!v)} style={s.headerButton}><Text style={s.more}>···</Text></TouchableOpacity></View>
+  {showMembers&&<View style={s.members}><View style={s.memberHeader}><Text style={s.memberTitle}>群成员</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="收起群成员" onPress={()=>setShowMembers(false)}><Text style={s.memberClose}>收起</Text></TouchableOpacity></View><ScrollView horizontal contentContainerStyle={s.memberList}>{members.map(p=><View key={p.id} style={s.member}>{avatar(p,p.name)}<Text numberOfLines={1} style={s.memberName}>{p.name}</Text></View>)}</ScrollView><Text style={s.memberHint}>消息目前保存在本机，实时群聊尚未接入</Text></View>}
+  <ScrollView ref={list} style={{flex:1}} contentContainerStyle={s.messages} keyboardShouldPersistTaps="handled" onContentSizeChange={()=>list.current?.scrollToEnd({animated:true})}>
+   {!messages.length&&<Text style={s.empty}>一家人的日常，从一句问候开始</Text>}
+   {messages.map((m,index)=>{const mine=m.senderId==='me'||(!m.senderId&&(m.senderName==='我'||m.who==='我')),name=m.senderName||m.who||'家人',person=members.find(p=>p.id===m.senderId)||members.find(p=>p.name===name);const prev=messages[index-1],at=new Date(m.createdAt),previous=new Date(prev?.createdAt);const time=m.createdAt&&!Number.isNaN(at.getTime())&&(!prev||Number.isNaN(previous.getTime())||at-previous>5*60*1000);return <View key={m.id}>
+    {!!time&&<Text style={s.time}>{`${at.getMonth()+1}月${at.getDate()}日 ${String(at.getHours()).padStart(2,'0')}:${String(at.getMinutes()).padStart(2,'0')}`}</Text>}
+    <View style={[s.row,mine&&s.rowMine]}>{avatar(person,name)}<View style={[s.messageColumn,mine&&s.columnMine]}>{!mine&&<Text style={s.sender}>{name}</Text>}<View style={[s.bubble,mine&&s.bubbleMine]}><View style={[s.tail,mine&&s.tailMine]}/>{m.type==='media'?<View>{(m.mediaIds||[]).map(id=>{const a=(family.media||[]).find(x=>x.id===id);return a?.type==='image'||a?.type==='photo'?<Image key={id} source={{uri:a.uri}} style={s.photo}/>:<Text key={id} style={s.messageText}>▶ 视频</Text>})}<ChatArchiveCard message={m} onArchive={id=>decide(id,true)} onNoArchive={id=>decide(id,false)}/></View>:<Text style={s.messageText}>{m.text}</Text>}</View></View></View>
+   </View>})}
+  </ScrollView>
+  <View style={s.compose}><TextInput accessibilityLabel="家庭群消息" value={text} onChangeText={setText} multiline maxLength={5000} style={s.input} placeholder="和家人说点什么…" placeholderTextColor="#A2A8A4"/><TouchableOpacity accessibilityRole="button" accessibilityLabel="添加聊天照片或视频" onPress={pick} disabled={picking} style={s.add}><JiaIcon name="plus" size={22} color="#424A45"/></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="发送群消息" disabled={!text.trim()} onPress={sendText} style={[s.send,!text.trim()&&s.sendDisabled]}><Text style={s.sendText}>发送</Text></TouchableOpacity></View>
+ </KeyboardAvoidingView>
 }
-const s=StyleSheet.create({page:{flex:1,padding:18,paddingBottom:92,backgroundColor:C.bg},title:{fontSize:23,fontWeight:"800",color:C.deep,marginVertical:12},bubble:{alignSelf:"flex-start",backgroundColor:C.card,padding:12,borderRadius:16,marginVertical:5,maxWidth:"82%"},
- who:{fontSize:11,color:C.muted,marginBottom:4},compose:{flexDirection:"row",alignItems:"center",gap:7},add:{fontSize:30,color:C.brown},input:{flex:1,backgroundColor:"#fff",borderWidth:1,borderColor:C.line,borderRadius:15,padding:11},send:{backgroundColor:C.brown,color:"#fff",padding:11,borderRadius:12,overflow:"hidden"}});
+const s=StyleSheet.create({page:{flex:1,paddingBottom:72,backgroundColor:'#EDEDED'},header:{height:62,flexDirection:'row',alignItems:'center',paddingHorizontal:10,borderBottomWidth:1,borderBottomColor:'#DDDFDD',backgroundColor:'#F7F7F7'},headerButton:{width:40,height:44,alignItems:'center',justifyContent:'center'},heading:{flex:1,alignItems:'center',paddingHorizontal:8},title:{fontSize:17,fontWeight:'600',color:'#202522'},status:{fontSize:10,color:'#929A94',marginTop:3},more:{fontSize:27,fontWeight:'700',color:'#202522',marginTop:-10},messages:{paddingHorizontal:14,paddingTop:15,paddingBottom:22},time:{fontSize:11,color:'#9A9E9B',textAlign:'center',marginVertical:14},row:{flexDirection:'row',alignItems:'flex-start',gap:9,marginVertical:10},rowMine:{flexDirection:'row-reverse'},avatar:{width:38,height:38,borderRadius:7,backgroundColor:'#D9E5DF',alignItems:'center',justifyContent:'center',overflow:'hidden'},avatarImage:{width:38,height:38},avatarText:{fontSize:16,fontWeight:'600',color:'#527062'},messageColumn:{maxWidth:'76%',alignItems:'flex-start'},columnMine:{alignItems:'flex-end'},sender:{fontSize:11,color:'#8B938D',marginBottom:4,marginLeft:1},bubble:{backgroundColor:'#FFFFFF',paddingHorizontal:12,paddingVertical:10,borderRadius:6,minHeight:38},bubbleMine:{backgroundColor:'#A9E97A'},tail:{position:'absolute',left:-4,top:14,width:8,height:8,backgroundColor:'#FFFFFF',transform:[{rotate:'45deg'}]},tailMine:{left:undefined,right:-4,backgroundColor:'#A9E97A'},messageText:{fontSize:16,lineHeight:23,color:'#222824'},photo:{width:160,height:160,borderRadius:5,marginBottom:7},compose:{flexDirection:'row',alignItems:'flex-end',paddingHorizontal:10,paddingVertical:9,gap:8,backgroundColor:'#F7F7F7',borderTopWidth:1,borderTopColor:'#DDDFDD'},input:{flex:1,minHeight:40,maxHeight:110,backgroundColor:'#FFFFFF',borderRadius:6,paddingHorizontal:11,paddingVertical:9,fontSize:16,lineHeight:22,color:'#222824'},add:{width:32,height:40,alignItems:'center',justifyContent:'center'},send:{height:38,paddingHorizontal:13,backgroundColor:'#07A95C',borderRadius:6,alignItems:'center',justifyContent:'center'},sendDisabled:{backgroundColor:'#DDE5DF'},sendText:{color:'#FFFFFF',fontSize:14,fontWeight:'600'},empty:{color:'#9BA39E',fontSize:12,textAlign:'center',marginTop:28},members:{backgroundColor:'#FAFAFA',padding:14,borderBottomWidth:1,borderBottomColor:'#E1E5E2'},memberHeader:{flexDirection:'row',justifyContent:'space-between',marginBottom:12},memberTitle:{fontSize:14,fontWeight:'600',color:'#323D36'},memberClose:{fontSize:12,color:'#6E7E73'},memberList:{gap:18},member:{alignItems:'center',width:48},memberName:{fontSize:11,color:'#657268',marginTop:5},memberHint:{fontSize:10,color:'#8E9A91',marginTop:12}});
