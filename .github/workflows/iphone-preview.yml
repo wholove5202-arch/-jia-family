@@ -13,42 +13,73 @@ concurrency:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 60
     env:
       CI: "1"
-      EXPO_TOKEN: ${{ secrets.EXRO_TOKEN }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || secrets.EXRO_TOKEN }}
       EXPO_NO_DEVTOOLS: "1"
       EXPO_OFFLINE: "0"
     steps:
       - name: Check Expo access
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo "Add the EXRO_TOKEN repository secret first."
+            echo "The previously configured Expo repository secret is unavailable."
             exit 1
           fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci --no-audit --no-fund
+          account=$(npx expo whoami)
+          test "$account" = "liupengcheng520" || { echo "Expo account does not match the configured iPhone account."; exit 1; }
       - name: Install Expo tunnel
         run: npm install --global '@expo/ngrok@^4.1.0'
       - name: Start real Expo tunnel and show iPhone link
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           echo "Starting Expo tunnel..."
-          set +e
-          timeout 8m script -q -f -e -c "env -u CI EXPO_NO_DEVTOOLS=1 npx expo start --go --tunnel --port 8081 --clear" /dev/null
-          code=$?
-          set -e
-
-          if [ "$code" -eq 124 ]; then
-            echo "Expo preview window finished normally."
-            exit 0
-          fi
-
-          exit "$code"
+          mkdir -p iphone-preview
+          nohup timeout 48m script -q -f -e -c "env -u CI EXPO_NO_DEVTOOLS=1 npx expo start --go --tunnel --port 8081 --clear" /tmp/jia-preview-session.log > /tmp/jia-preview-output.log 2>&1 &
+          echo "$!" > /tmp/jia-preview.pid
+          python3 - <<'PY'
+          import json, os, re, time
+          from pathlib import Path
+          deadline = time.monotonic() + 180
+          while time.monotonic() < deadline:
+              log = Path('/tmp/jia-preview-output.log').read_text(errors='replace')
+              urls = re.findall(r'exp://[a-zA-Z0-9.-]+(?::[0-9]+)?', log)
+              urls = [url for url in urls if '.exp.direct' in url]
+              if urls:
+                  url = urls[-1]
+                  Path('iphone-preview/link.txt').write_text(url + '\n')
+                  Path('iphone-preview/details.json').write_text(json.dumps({'url': url, 'account': 'liupengcheng520', 'commit': os.environ['GITHUB_SHA'], 'readyAt': int(time.time()), 'windowMinutes': 45}))
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                      summary.write('## iPhone Expo Go preview\n\n' + url + '\n\nKeep this workflow running. The preview window lasts 45 minutes.\n')
+                  print('Expo Go preview ready: ' + url)
+                  break
+              time.sleep(2)
+          else:
+              raise SystemExit('Expo tunnel did not provide a public URL within 180 seconds.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jia-iphone-expo-go-link
+          path: iphone-preview/*
+          retention-days: 1
+          if-no-files-found: error
+      - name: Keep iPhone preview available for 45 minutes
+        shell: bash
+        run: |
+          set -euo pipefail
+          pid=$(cat /tmp/jia-preview.pid)
+          for minute in $(seq 1 45); do
+            kill -0 "$pid" || { echo "Expo preview server stopped unexpectedly."; exit 1; }
+            sleep 60
+          done
+          kill "$pid" || true
