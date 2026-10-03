@@ -119,7 +119,7 @@ export default function IntegratedPhase1App(){
  const Person=()=> <PersonProfileScreen person={person} family={family} members={family.members} avatarUri={personAvatar(person)} onBack={back} onEdit={()=>setScreen("editPerson")} onAdd={()=>openAdd(person)} onDelete={deletePerson} onRelation={relative=>relative?.id?openPerson(relative):setScreen("relation")} onFocus={()=>{setTreeFocusId(person.id);setScreen("tree")}} onAvatar={()=>setScreen("avatar")} onMemorial={()=>setScreen("memorial")} onHonors={()=>setScreen('honors')} onTimeline={()=>setScreen('timeline')} onMessages={()=>setScreen('chat')} onAdvice={()=>setScreen('advice')}/>;
 
  const privateMenu=[
-  ["person","让 AI 了解我","本人回答 · 可以跳过与修改","lifeInterview","#508971","#EAF4ED"],
+  ["person","我的人生","慢慢留下经历，让后人了解你","lifeInterview","#508971","#EAF4ED"],
   ["shieldLock","二级密码（可选）","给私密空间再加一道保护","password","#A86D22","#EEF6FC"],
   ["letter","写给未来的一封信","文字与原声，留给未来的人","futureLetter","#C85E4A","#F9E3DE"],
   ["privateAlbum","非公开相册","只属于自己的私密影像","privateMedia","#397D83","#DDEFF0"],
@@ -138,7 +138,7 @@ export default function IntegratedPhase1App(){
  else if(screen==="album")body=<MemoryAlbumScreen family={family} onMedia={openMedia} onAdd={()=>{setUploadAssets([]);setScreen("add")}} onBack={()=>setScreen("home")} onDelete={deleteMedia} onUpdate={updateAlbumMedia}/>;
  else if(screen==="familySettings")body=<FamilyBranchSettings key={family.id} family={family} onSave={settings=>savePublic(state=>({...state,families:state.families.map(f=>f.id===family.id?{...f,branchSharing:settings}:f)}))}/>;
  else if(screen==="my")body=<MyHomeScreen family={family} onPerson={openPerson} onGo={setScreen}/>;
- else if(screen==='lifeInterview')body=<LifeInterviewScreen record={priv.lifeInterviews?.me} onSave={(questionId,optionId)=>savePrivate(state=>updateInterview(state,{personId:'me',questionId,optionId}))}/>;
+ else if(screen==='lifeInterview')body=<LifeInterviewScreen onRecordStory={()=>setScreen("memory")} record={priv.lifeInterviews?.me} onSave={(questionId,optionId)=>savePrivate(state=>updateInterview(state,{personId:'me',questionId,optionId}))}/>;
  else if(screen==="tagMedia")body=<MediaPeopleTagger media={selectedMedia} members={family.members} onSave={saveTagged}/>;
  else if(screen==="person")body=<Person/>;
  else if(screen==="relation")body=<ParentEditorScreen key={person.id} onBack={back} person={person} members={family.members} onMarriage={(id,status)=>{const members=endMarriage(family.members,person.id,id,status);updateMembers(members);setPerson(members.find(x=>x.id===person.id));Alert.alert('已记录离异关系');}} onSave={r=>{const np={...person,...r,parentageManual:true};updateMembers(family.members.map(p=>p.id===person.id?np:p));finishPerson(np)}}/>;

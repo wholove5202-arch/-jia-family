@@ -11,6 +11,7 @@ const props={record:{answers:{}},onSave:()=>new Promise((resolve,reject)=>{pendi
 const render=()=>{cursor=0;return walk(out.default(props))};
 const button=(label)=>{const found=render().find(n=>n.props?.accessibilityLabel===label);assert.ok(found,'missing '+label);return found};
 (async()=>{
+ button('继续聊聊我的人生').props.onPress();
  button('答案：是').props.onPress();
  let saving=button('保存并继续').props.onPress();
  assert.ok(render().some(n=>n.props?.children?.includes('童年问题')),'must stay on the question until saved');

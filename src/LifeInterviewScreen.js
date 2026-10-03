@@ -3,13 +3,14 @@ import {View,Text,TouchableOpacity,ScrollView,StyleSheet} from 'react-native';
 import {interviewQuestions} from './lifeInterview';
 import {theme} from './theme';
 
-export default function LifeInterviewScreen({record,onSave}){
+export default function LifeInterviewScreen({record,onSave,onRecordStory}){
  const answers=record?.answers||{};
+ const [home,setHome]=useState(true);
  const [index,setIndex]=useState(()=>{const first=interviewQuestions.findIndex(q=>!answers[q.id]);return first<0?0:first});
  const [review,setReview]=useState(false),[selected,setSelected]=useState(()=>answers[interviewQuestions[index].id]?.optionId||null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const saving=useRef(false),question=interviewQuestions[index];
  const count=interviewQuestions.filter(q=>answers[q.id]&&!['skip','unsure'].includes(answers[q.id].optionId)).length;
- const chooseQuestion=i=>{if(saving.current)return;setIndex(i);setSelected(answers[interviewQuestions[i].id]?.optionId||null);setError('');setReview(false)};
+ const chooseQuestion=i=>{if(saving.current)return;setIndex(i);setSelected(answers[interviewQuestions[i].id]?.optionId||null);setError('');setReview(false);setHome(false)};
  async function save(remove=false){
   if(saving.current||!remove&&!selected)return;
   saving.current=true;setBusy(true);setError('');
@@ -22,8 +23,17 @@ export default function LifeInterviewScreen({record,onSave}){
   finally{saving.current=false;setBusy(false)}
  }
  function chooseNext(i){setIndex(i);setSelected(answers[interviewQuestions[i].id]?.optionId||null);setError('')}
+ if(home)return <ScrollView style={s.root} contentContainerStyle={s.page}>
+  <Text style={s.title}>我的人生</Text>
+  <Text style={s.intro}>让后人知道，你经历过什么，珍惜过什么。</Text>
+  <View style={s.lifeCard}><Text style={s.cardTitle}>今天，留下一点关于你</Text><Text style={s.cardCopy}>小时候的家、第一次远行、为家人做过的事……从你想说的那一段开始。</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="继续聊聊我的人生" onPress={()=>{setReview(false);setHome(false)}} style={s.save}><Text style={s.saveText}>{count?'继续聊聊我的人生':'从童年聊起'}</Text></TouchableOpacity></View>
+  <TouchableOpacity accessibilityRole="button" accessibilityLabel="查看我的回答" onPress={()=>{setHome(false);setReview(true)}} style={s.summaryCard}><Text style={s.cardTitle}>已经留下的回答</Text><Text style={s.cardCopy}>{count} 条本人回答 · 随时查看、修改</Text><Text style={s.link}>查看我的回答　›</Text></TouchableOpacity>
+  {onRecordStory&&<View style={s.summaryCard}><Text style={s.cardTitle}>一件值得记住的事</Text><Text style={s.cardCopy}>选择题留下线索，具体的故事留下你的经历。可以写几句话，也可以附上照片。</Text><TouchableOpacity accessibilityRole="button" accessibilityLabel="记录一段家庭故事" onPress={onRecordStory} style={s.storyAction}><Text style={s.link}>记录一段故事　›</Text></TouchableOpacity><Text style={s.small}>进入家庭记忆；保存的故事会显示在当前家庭动态中。</Text></View>}
+  <View style={s.futureCard}><Text style={s.cardTitle}>未来，后人可以这样问</Text><Text style={s.example}>“你为什么离开家乡？”</Text><Text style={s.example}>“你人生最难忘的经历是什么？”</Text><Text style={s.small}>目前可以保存与回看回答。AI 问答与故事影片尚未开放；答题数量不代表人生还原准确率。</Text></View>
+  <Text style={[s.small,{marginTop:18}]}>选择题回答仅自己查看。私密空间的信、声音、影像不会进入 AI。</Text>
+ </ScrollView>;
  return <ScrollView style={s.root} contentContainerStyle={s.page}>
-  <Text style={s.title}>让 AI 了解我</Text>
+  <TouchableOpacity accessibilityRole="button" accessibilityLabel="返回我的人生" disabled={busy} onPress={()=>setHome(true)} style={s.tool}><Text style={s.link}>‹ 我的人生</Text></TouchableOpacity><Text style={s.title}>聊聊我的人生</Text>
   <Text style={s.intro}>不用写长篇，慢慢留下你的经历和想法。</Text>
   <Text style={s.notice}>目前保存本人回答，尚未接入 AI 分析。回答仅自己查看，未来用于陪伴或影片时再单独授权。</Text>
   <View style={s.progress}><Text style={s.small}>已回答 {count} / {interviewQuestions.length} 题</Text><TouchableOpacity disabled={busy} accessibilityRole="button" accessibilityLabel={review?'继续回答':'查看我的回答'} onPress={()=>{setReview(v=>!v);setError('')}}><Text style={s.link}>{review?'继续回答':'我的回答'}</Text></TouchableOpacity></View>
@@ -37,4 +47,4 @@ export default function LifeInterviewScreen({record,onSave}){
   </>}
  </ScrollView>
 }
-const s=StyleSheet.create({root:{flex:1,backgroundColor:'#FFFFFF'},page:{padding:22,paddingBottom:110,width:'100%',maxWidth:600,alignSelf:'center'},title:{fontSize:25,lineHeight:34,fontWeight:'600',color:theme.deep},intro:{fontSize:15,lineHeight:24,color:theme.muted,marginTop:8},notice:{fontSize:12,lineHeight:20,color:'#81928A',marginTop:14},progress:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:22,marginBottom:22},small:{fontSize:12,lineHeight:21,color:theme.muted},link:{fontSize:14,lineHeight:24,color:'#398ACA'},topic:{fontSize:12,lineHeight:20,color:'#789685',marginBottom:9},question:{fontSize:22,lineHeight:33,fontWeight:'600',color:theme.deep,marginBottom:20},options:{gap:10},option:{minHeight:52,paddingHorizontal:16,paddingVertical:13,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderRadius:15,borderWidth:1,borderColor:'#E5EBE7',backgroundColor:'#FAFCFA'},optionSelected:{backgroundColor:'#EAF4ED',borderColor:'#AAC8B2'},optionText:{fontSize:16,lineHeight:25,color:theme.deep,flex:1},selectedText:{color:'#39714C',fontWeight:'600'},check:{color:'#739982',fontSize:18,paddingLeft:12},save:{marginTop:24,minHeight:48,padding:12,borderRadius:16,backgroundColor:theme.brown,alignItems:'center',justifyContent:'center'},saveText:{color:'#FFFFFF',fontSize:15,fontWeight:'600'},tools:{flexDirection:'row',justifyContent:'space-between',marginVertical:12},tool:{paddingVertical:10},error:{fontSize:13,lineHeight:21,color:'#B84C45',marginTop:14},reviewRow:{paddingVertical:16,borderBottomWidth:1,borderBottomColor:'#EEF1EE',gap:8},reviewQuestion:{fontSize:16,lineHeight:25,color:theme.deep}});
+const s=StyleSheet.create({lifeCard:{marginTop:24,padding:20,borderRadius:20,backgroundColor:'#EFF6FC'},summaryCard:{marginTop:16,padding:18,borderRadius:18,borderWidth:1,borderColor:'#E6EBEF',gap:8},futureCard:{marginTop:20,padding:18,borderRadius:18,backgroundColor:'#F7F9FB',gap:10},cardTitle:{fontSize:18,lineHeight:28,fontWeight:'600',color:theme.deep},cardCopy:{fontSize:15,lineHeight:25,color:theme.muted,marginTop:6},example:{fontSize:16,lineHeight:26,color:theme.deep},storyAction:{paddingVertical:8},root:{flex:1,backgroundColor:'#FFFFFF'},page:{padding:22,paddingBottom:110,width:'100%',maxWidth:600,alignSelf:'center'},title:{fontSize:25,lineHeight:34,fontWeight:'600',color:theme.deep},intro:{fontSize:15,lineHeight:24,color:theme.muted,marginTop:8},notice:{fontSize:12,lineHeight:20,color:'#81928A',marginTop:14},progress:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:22,marginBottom:22},small:{fontSize:12,lineHeight:21,color:theme.muted},link:{fontSize:14,lineHeight:24,color:'#398ACA'},topic:{fontSize:12,lineHeight:20,color:'#789685',marginBottom:9},question:{fontSize:22,lineHeight:33,fontWeight:'600',color:theme.deep,marginBottom:20},options:{gap:10},option:{minHeight:52,paddingHorizontal:16,paddingVertical:13,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderRadius:15,borderWidth:1,borderColor:'#E5EBE7',backgroundColor:'#FAFCFA'},optionSelected:{backgroundColor:'#EAF4ED',borderColor:'#AAC8B2'},optionText:{fontSize:16,lineHeight:25,color:theme.deep,flex:1},selectedText:{color:'#39714C',fontWeight:'600'},check:{color:'#739982',fontSize:18,paddingLeft:12},save:{marginTop:24,minHeight:48,padding:12,borderRadius:16,backgroundColor:theme.brown,alignItems:'center',justifyContent:'center'},saveText:{color:'#FFFFFF',fontSize:15,fontWeight:'600'},tools:{flexDirection:'row',justifyContent:'space-between',marginVertical:12},tool:{paddingVertical:10},error:{fontSize:13,lineHeight:21,color:'#B84C45',marginTop:14},reviewRow:{paddingVertical:16,borderBottomWidth:1,borderBottomColor:'#EEF1EE',gap:8},reviewQuestion:{fontSize:16,lineHeight:25,color:theme.deep}});
